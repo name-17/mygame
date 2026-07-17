@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>추억의 뽑기판(150칸)</title>
+    <style>
+        body {
+            background-color: #f7df1e;
+            font-family: 'Malgun Gothic', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .config-container {
+            background-color: #fff;
+            border: 4px solid #0b3c5d;
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .config-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0b3c5d;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid #0b3c5d;
+            padding-bottom: 8px;
+        }
+        .config-subtitle {
+            font-size: 13px;
+            color: #ff007f;
+            text-align: center;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .config-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .config-row label {
+            font-weight: bold;
+            font-size: 14px;
+            width: 65px;
+            color: #0b3c5d;
+            flex-shrink: 0;
+            text-align: center;
+        }
+        .config-row input[type="text"] {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .config-row input[type="number"] {
+            width: 55px;
+            padding: 6px 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .start-btn {
+            width: 100%;
+            background-color: #ff007f;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .start-btn:hover {
+            background-color: #d00068;
+        }
+        .board-container {
+            background-color: #f7df1e;
+            border: 8px solid #f7df1e;
+            width: 100%;
+            max-width: 780px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 15px;
+            box-sizing: border-box;
+            display: none;
+            margin: 0 auto;
+        }
+        .board-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        .header {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ff007f;
+            text-shadow: 2px 2px 0px #fff;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .reset-btn {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .reset-btn:hover {
+            background-color: #000;
+        }
+        .dashboard {
+            background-color: #fff;
+            border: 3px dashed #0b3c5d;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .dashboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .count-num {
+            color: #ff007f;
+        }
+        .count-num.sold-out {
+            color: #aaa;
+            text-decoration: line-through;
+        }
+        .grid-board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            gap: 5px;
+            background-color: #0b3c5d;
+            padding: 10px;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .ticket {
+            aspect-ratio: 1 / 1.25;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 17.6px;
+            font-weight: bold;
+            border-radius: 3px;
+            transition: transform 0.1s, box-shadow 0.1s;
+            user-select: none;
+            box-sizing: border-box;
+            min-height: 42px;
+            padding: 2px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+        }
+        @media (max-width: 760px) {
+            .grid-board { grid-template-columns: repeat(10, 1fr); }
+            .ticket { font-size: 16px; }
+        }
+        @media (max-width: 500px) {
+            .grid-board { grid-template-columns: repeat(10, 1fr) !important; overflow-x: auto; }
+            .ticket { font-size: 14px; min-width: 36px; }
+        }
+        .ticket:hover:not(.opened) {
+            transform: scale(1.15);
+            z-index: 5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .ticket.opened {
+            cursor: default;
+            font-size: 14px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        @media (max-width: 500px) {
+            .ticket.opened { font-size: 11px; }
+        }
+        .ticket.opened.txt-1 { color: #ff3399; }
+        .ticket.opened.txt-2 { color: #ffb300; }
+        .ticket.opened.txt-3 { color: #00ff66; }
+        .ticket.opened.txt-4 { color: #00eaff; }
+        .ticket.opened.txt-5 { color: #ffffff; font-weight: normal; }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            perspective: 1000px;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .focus-card {
+            width: 150px;
+            height: 187.5px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: scale(0.2) rotateY(0deg);
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .focus-card {
+            transform: scale(1) rotateY(180deg);
+        }
+        .card-face {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            user-select: none;
+        }
+        .card-front {
+            background-color: #005b96;
+            background-size: cover;
+            background-position: center;
+            color: #fffde4;
+            font-size: 32px;
+            font-weight: bold;
+            border: 4px solid #fff;
+        }
+        .card-back {
+            background-color: #fff;
+            color: #000;
+            transform: rotateY(180deg);
+            border: 6px solid #f7df1e;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .back-result {
+            font-size: 37.4px;
+            font-weight: bold;
+            color: #ff007f;
+            white-space: pre-line;
+            word-break: keep-all;
+            line-height: 1.2;
+        }
+        .focus-card.rank-1 .back-result { color: #ff007f; }
+        .focus-card.rank-2 .back-result { color: #ff8c00; }
+        .focus-card.rank-3 .back-result { color: #008000; }
+        .focus-card.rank-4 .back-result { color: #005b96; }
+        .focus-card.rank-5 .back-result { color: #888; }
+
+        .modal-btn {
+            background-color: #fff;
+            color: #333;
+            border: none;
+            padding: 12px 40px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s;
+        }
+        .modal-overlay.active .modal-btn {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.5s;
+        }
+        .modal-btn:hover {
+            background-color: #f7df1e;
+        }
+        .confetti-particle {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            pointer-events: none;
+            z-index: 9999 !important;
+            top: -20px;
+            animation: confettiFall linear forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="config-container" id="configContainer">
+        <div class="config-title">⚙️ 뽑기판 상품 설정</div>
+        <div class="config-subtitle">(총 150칸 기준)</div>
+        <div class="config-row" style="flex-direction: column; align-items: stretch; background-color: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px dashed #0b3c5d;">
+            <label style="width: 100%; text-align: left; margin-bottom: 6px; font-size: 13px;">🖼️ 배경사진 넣기(용량이 크면 로딩이 길어집니다.)</label>
+            <label style="width: 100%; text-align: left; margin-bottom: 6px; font-size: 13px;">("미선택" 기본배경, "F5" 초기화)</label>
+            <input type="file" id="imageInput" accept="image/*" style="font-size: 12px; cursor: pointer;">
+        </div>
+        <div class="config-row">
+            <label>1등 🎊</label>
+            <input type="text" id="input-p1" value="방셀">
+            <input type="number" id="input-c1" value="1" min="0" max="150">
+        </div>
+        <div class="config-row">
+            <label>2등 🎉</label>
+            <input type="text" id="input-p2" value="노래 완곡">
+            <input type="number" id="input-c2" value="3" min="0" max="150">
+        </div>
+        <div class="config-row">
+            <label>3등 🍫</label>
+            <input type="text" id="input-p3" value="노래 1절">
+            <input type="number" id="input-c3" value="10" min="0" max="150">
+        </div>
+        <div class="config-row">
+            <label>4등 🍬</label>
+            <input type="text" id="input-p4" value="뽀뽀 or 윙크">
+            <input type="number" id="input-c4" value="30" min="0" max="150">
+        </div>
+        <div class="config-row">
+            <label>5등 🥳</label>
+            <input type="text" id="input-p4" value="리액션">
+            <input type="number" id="input-c5" value="106" min="0" max="150">
+        </div>
+        <button class="start-btn" id="startBtn">뽑기판 만들기 🛠️</button>
+    </div>
+
+    <div class="board-container" id="boardContainer">
+        <div class="board-top-bar">
+            <div class="header">🎁🍀 추억의 뽑기판 🍀🎁</div>
+            <button class="reset-btn" id="resetBtn">⚙️ 처음으로</button>
+        </div>
+        <div class="dashboard">
+            <div class="dashboard-item"><span id="lbl-1">1등 :</span> <span id="count-1" class="count-num">0개</span></div>
+            <div class="dashboard-item"><span id="lbl-2">2등 :</span> <span id="count-2" class="count-num">0개</span></div>
+            <div class="dashboard-item"><span id="lbl-3">3등 :</span> <span id="count-3" class="count-num">0개</span></div>
+            <div class="dashboard-item"><span id="lbl-4">4등 :</span> <span id="count-4" class="count-num">0개</span></div>
+        </div>
+        <div class="grid-board" id="board"></div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="focus-card" id="focusCard">
+            <div class="card-face card-front" id="modalFrontNum">0</div>
+            <div class="card-face card-back">
+                <div class="back-result" id="modalResult">결과 텍스트</div>
+            </div>
+        </div>
+        <button class="modal-btn" id="modalCloseBtn">닫기</button>
+    </div>
+<script>
+    const TOTAL_TICKETS = 150;
+    const board = document.getElementById('board');
+    const configContainer = document.getElementById('configContainer');
+    const boardContainer = document.getElementById('boardContainer');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const imageInput = document.getElementById('imageInput');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const focusCard = document.getElementById('focusCard');
+    const modalFrontNum = document.getElementById('modalFrontNum');
+    const modalResult = document.getElementById('modalResult');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+    let currentCounts = {};
+    let prizes = [];
+    let autoCloseTimer = null;
+    let finalImageUrl = '';
+
+    // 🔊 [오류 수정] 오디오 시스템을 단 하나만 상주시켜 볼륨 불균형/찌그러짐 현상을 원천 차단합니다.
+    let globalAudioCtx = null;
+    function getAudioContext() {
+        if (!globalAudioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                globalAudioCtx = new AudioContext();
+            }
+        }
+        if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+            globalAudioCtx.resume();
+        }
+        return globalAudioCtx;
+    }
+
+    // 🥁 1. 카드를 내려놓으며 "툭, 스윽-" 하고 오픈하는 소리 (볼륨 안정화)
+    function playDrumRoll() {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            
+            // 1) 툭 부딪히는 저음
+            const bodyOsc = ctx.createOscillator();
+            const bodyGain = ctx.createGain();
+            bodyOsc.type = 'sine';
+            bodyOsc.frequency.setValueAtTime(180, now);
+            bodyGain.gain.setValueAtTime(0.0, now);
+            bodyGain.gain.linearRampToValueAtTime(0.35, now + 0.02);
+            bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            bodyOsc.connect(bodyGain);
+            bodyGain.connect(ctx.destination);
+            bodyOsc.start(now);
+            bodyOsc.stop(now + 0.15);
+
+            // 2) 스윽 쓸리는 마찰음
+            const bufferSize = ctx.sampleRate * 0.25;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+            const noiseNode = ctx.createBufferSource();
+            noiseNode.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(1100, now);
+            filter.Q.setValueAtTime(1.0, now);
+
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.0, now);
+            noiseGain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+            noiseNode.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(ctx.destination);
+            noiseNode.start(now);
+            noiseNode.stop(now + 0.25);
+        } catch (e) { console.log(e); }
+    }
+
+    // 🎺 2. 1등 당첨 시 대형 빵빠레 (볼륨 안정화)
+    function playWinSound() {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+
+            const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50, 1318.51, 1046.50, 1318.51, 1567.98, 2093.00];
+            const durations = [0.10, 0.10, 0.10, 0.25, 0.10, 0.10, 0.25, 0.08, 0.08, 0.08, 0.80];
+
+            let startTime = now;
+            notes.forEach((freq, index) => {
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.type = 'sawtooth'; 
+                osc.frequency.setValueAtTime(freq, startTime);
+                gainNode.gain.setValueAtTime(0.18, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + durations[index] - 0.01);
+                
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(2500, startTime);
+
+                osc.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                osc.start(startTime);
+                osc.stop(startTime + durations[index]);
+                startTime += durations[index] - 0.02; 
+            });
+        } catch (e) { console.log(e); }
+    }
+    // 🎺 2.5. 2등 당첨 효과음: "빰빠라밤~~!" (볼륨 안정화)
+    function playWin2Sound() {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+
+            const notes = [523.25, 783.99, 1046.50, 1318.51, 1567.98, 2093.00];
+            const durations = [0.08, 0.08, 0.08, 0.08, 0.08, 0.80];
+            
+            let startTime = now;
+            notes.forEach((freq, index) => {
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, startTime);
+                gainNode.gain.setValueAtTime(0.16, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + durations[index] - 0.01);
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(2200, startTime);
+
+                osc.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + durations[index]);
+                startTime += durations[index] - 0.01;
+            });
+        } catch (e) { console.log(e); }
+    }
+
+    // 🎮 3. 3등 당첨 효과음: 8비트 보너스음 "띠리링~✨" (볼륨 안정화)
+    function playWin3Sound() {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+
+            const notes = [1318.51, 1567.98, 1975.53];
+            const durations = [0.06, 0.06, 0.25];
+            
+            let startTime = now;
+            notes.forEach((freq, index) => {
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(freq, startTime);
+                gainNode.gain.setValueAtTime(0.08, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + durations[index] - 0.01);
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(3000, startTime);
+
+                osc.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + durations[index]);
+                startTime += durations[index] - 0.02;
+            });
+        } catch (e) { console.log(e); }
+    }
+
+    // 🥳 3. 5등 당첨 시 예능 실패음 "와와와왕~" (볼륨 고정형)
+    function playLoseSound() {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            osc.type = 'sawtooth';
+            
+            osc.frequency.setValueAtTime(320, now); 
+            osc.frequency.linearRampToValueAtTime(280, now + 0.15); 
+            osc.frequency.linearRampToValueAtTime(240, now + 0.3);  
+            osc.frequency.linearRampToValueAtTime(180, now + 0.45); 
+            osc.frequency.linearRampToValueAtTime(110, now + 0.8);  
+
+            gainNode.gain.setValueAtTime(0.0, now);
+            gainNode.gain.linearRampToValueAtTime(0.25, now + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.4);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, now);
+
+            osc.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.8);
+        } catch (e) { console.log(e); }
+    }
+
+    // 💾 [신규 기능] 데이터 영구 저장소 세이브/로드 엔진 설계
+    function saveData() {
+        const openedIndices = [];
+        document.querySelectorAll('.ticket').forEach((t, i) => {
+            if (t.classList.contains('opened')) openedIndices.push(i);
+        });
+        const state = {
+            currentCounts: currentCounts,
+            prizes: prizes,
+            finalImageUrl: finalImageUrl,
+            openedIndices: openedIndices,
+            lbls: {
+                l1: document.getElementById('lbl-1').innerText,
+                l2: document.getElementById('lbl-2').innerText,
+                l3: document.getElementById('lbl-3').innerText,
+                l4: document.getElementById('lbl-4').innerText
+            }
+        };
+        localStorage.setItem('retro_board_state', JSON.stringify(state));
+    }
+
+    // [신규 기능] 페이지가 켜졌을 때 기존 세션 상태를 그대로 복구하는 트리거
+    window.addEventListener('load', () => {
+        const saved = localStorage.getItem('retro_board_state');
+        if (saved) {
+            try {
+                const state = JSON.parse(saved);
+                currentCounts = state.currentCounts;
+                prizes = state.prizes;
+                finalImageUrl = state.finalImageUrl;
+                
+                document.getElementById('lbl-1').innerText = state.lbls.l1;
+                document.getElementById('lbl-2').innerText = state.lbls.l2;
+                document.getElementById('lbl-3').innerText = state.lbls.l3;
+                document.getElementById('lbl-4').innerText = state.lbls.l4;
+
+                initGameBoard(null, null, null, null, null, null, null, null, state.openedIndices);
+            } catch (e) { localStorage.removeItem('retro_board_state'); }
+        }
+    });
+    startBtn.addEventListener('click', () => {
+        const p1 = document.getElementById('input-p1').value;
+        const c1 = parseInt(document.getElementById('input-c1').value) || 0;
+        const p2 = document.getElementById('input-p2').value;
+        const c2 = parseInt(document.getElementById('input-c2').value) || 0;
+        const p3 = document.getElementById('input-p3').value;
+        const c3 = parseInt(document.getElementById('input-c3').value) || 0;
+        const p4 = document.getElementById('input-p4').value;
+        const c4 = parseInt(document.getElementById('input-c4').value) || 0;
+
+        if (c1 + c2 + c3 + c4 > TOTAL_TICKETS) {
+            alert(`당첨 총개수(${c1+c2+c3+c4}개)가 전체 칸 수(150칸)를 초과할 수 없습니다!`);
+            return;
+        }
+
+        const files = imageInput.files;
+        if (files && files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                finalImageUrl = e.target.result;
+                initGameBoard(p1, c1, p2, c2, p3, c3, p4, c4);
+            };
+            reader.readAsDataURL(files[0]);
+        } else {
+            finalImageUrl = ''; 
+            initGameBoard(p1, c1, p2, c2, p3, c3, p4, c4);
+        }
+    });
+
+    function initGameBoard(p1, c1, p2, c2, p3, c3, p4, c4, savedOpenedIndices = null) {
+        if (savedOpenedIndices === null) {
+            currentCounts = { '1등': c1, '2등': c2, '3등': c3, '4등': c4 };
+            document.getElementById('lbl-1').innerText = `1등 🎊 ${p1}`;
+            document.getElementById('lbl-2').innerText = `2등 🎉 ${p2}`;
+            document.getElementById('lbl-3').innerText = `3등 🍫 ${p3}`;
+            document.getElementById('lbl-4').innerText = `4등 🍬 ${p4}`;
+
+            prizes = [
+                ...Array(c1).fill({ grade: '1등', short: '1등', text: '1등 🎊'}),
+                ...Array(c2).fill({ grade: '2등', short: '2등', text: '2등 🎉'}),
+                ...Array(c3).fill({ grade: '3등', short: '3등', text: '3등 🍫'}),
+                ...Array(c4).fill({ grade: '4등', short: '4등', text: '4등 🍬'}),
+            ];
+            const remaining = TOTAL_TICKETS - prizes.length;
+            prizes = prizes.concat(Array(remaining).fill({ grade: '5등', short: '5등', text: '5등 🥳' }));
+
+            for (let i = prizes.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [prizes[i], prizes[j]] = [prizes[j], prizes[i]];
+            }
+        }
+
+        for(let i = 1; i <= 4; i++) {
+            const countEl = document.getElementById(`count-${i}`);
+            const currentLeft = currentCounts[i+'등'];
+            if (currentLeft === 0) {
+                countEl.innerText = '품절 ✕';
+                countEl.classList.add('sold-out');
+            } else {
+                countEl.innerText = `${currentLeft}개`;
+                countEl.classList.remove('sold-out');
+            }
+        }
+
+        board.innerHTML = '';
+        const COLS = 15;
+        const ROWS = 10;
+
+        prizes.forEach((prizeResult, index) => {
+            const ticket = document.createElement('div');
+            ticket.classList.add('ticket');
+            
+            const xIdx = index % COLS;
+            const yIdx = Math.floor(index / COLS);
+            const posX = (xIdx / (COLS - 1)) * 100;
+            const posY = (yIdx / (ROWS - 1)) * 100;
+
+            if (savedOpenedIndices && savedOpenedIndices.includes(index)) {
+                ticket.classList.add('opened');
+                const openBgUrl = finalImageUrl ? `, url('${finalImageUrl}')` : '';
+                ticket.style.backgroundImage = `linear-gradient(rgba(24, 38, 48, 0.82), rgba(24, 38, 48, 0.82))${openBgUrl}`;
+                ticket.innerText = prizeResult.short;
+                const rankNum = prizeResult.grade === '1등' ? '1' : prizeResult.grade === '2등' ? '2' : prizeResult.grade === '3등' ? '3' : prizeResult.grade === '4등' ? '4' : '5';
+                ticket.classList.add(`txt-${rankNum}`);
+            } else {
+                ticket.innerText = index + 1;
+                const bgUrl = finalImageUrl ? `, url('${finalImageUrl}')` : '';
+                ticket.style.backgroundImage = `linear-gradient(rgba(11, 60, 93, 0.45), rgba(11, 60, 93, 0.45))${bgUrl}`;
+            }
+            
+            if(finalImageUrl) {
+                ticket.style.backgroundSize = `${COLS * 100}% ${ROWS * 100}%`;
+                ticket.style.backgroundPosition = `${posX}% ${posY}%`;
+            } else {
+                ticket.style.backgroundSize = 'auto';
+                ticket.style.backgroundPosition = 'normal';
+            }
+
+            ticket.addEventListener('click', () => {
+                if (!ticket.classList.contains('opened')) {
+                    ticket.classList.add('opened');
+                    const openBgUrl = finalImageUrl ? `, url('${finalImageUrl}')` : '';
+                    ticket.style.backgroundImage = `linear-gradient(rgba(24, 38, 48, 0.82), rgba(24, 38, 48, 0.82))${openBgUrl}`;
+                    ticket.innerText = prizeResult.short;
+                    
+                    const rankNum = prizeResult.grade === '1등' ? '1' : prizeResult.grade === '2등' ? '2' : prizeResult.grade === '3등' ? '3' : prizeResult.grade === '4등' ? '4' : '5';
+                    ticket.classList.add(`txt-${rankNum}`);
+                    
+                    updateDashboard(prizeResult.grade);
+                    openZoomFlipAnimation(index + 1, prizeResult);
+                    saveData();
+                }
+            });
+            board.appendChild(ticket);
+        });
+        const cardFront = document.getElementById('focusCard').querySelector('.card-front');
+        if (cardFront) {
+            const frontBgUrl = finalImageUrl ? `, url('${finalImageUrl}')` : '';
+            cardFront.style.backgroundImage = `linear-gradient(rgba(11, 60, 93, 0.5), rgba(11, 60, 93, 0.5))${frontBgUrl}`;
+        }
+
+        configContainer.style.display = 'none';
+        boardContainer.style.display = 'block';
+        if (savedOpenedIndices === null) saveData();
+    }
+
+    resetBtn.addEventListener('click', () => {
+        if(confirm('진행 중인 게임을 완전히 초기화하고 세팅 화면으로 돌아가시겠습니까?\n(기존 저장된 복구 데이터가 삭제됩니다.)')) {
+            clearTimeout(autoCloseTimer);
+            localStorage.removeItem('retro_board_state');
+            boardContainer.style.display = 'none';
+            configContainer.style.display = 'block';
+            board.innerHTML = '';
+        }
+    });
+
+    function launchConfettiStorm() {
+        const colors = ['#ff007f', '#f7df1e', '#00eaff', '#7efb00', '#ff7b00', '#9d00ff'];
+        for (let i = 0; i < 120; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('confetti-particle');
+            particle.style.left = (Math.random() * 100) + 'vw';
+            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+            const scale = Math.random() * 0.8 + 0.6;
+            particle.style.transform = `scale(${scale})`;
+            particle.style.animationName = 'confettiFall';
+            particle.style.animationDuration = (Math.random() * 2.5 + 2) + 's';
+            particle.style.animationDelay = (Math.random() * 0.4) + 's';
+            document.body.appendChild(particle);
+
+            setTimeout(() => { particle.remove(); }, 5000);
+        }
+    }
+
+    function openZoomFlipAnimation(ticketNum, prizeObj) {
+        clearTimeout(autoCloseTimer);
+        focusCard.className = 'focus-card';
+        
+        const gradeStr = prizeObj.grade || ''; 
+        const rankNum = gradeStr.includes('1등') ? '1' : 
+                        gradeStr.includes('2등') ? '2' : 
+                        gradeStr.includes('3등') ? '3' : 
+                        gradeStr.includes('4등') ? '4' : '5';
+        
+        focusCard.classList.add(`rank-${rankNum}`);
+        
+        modalFrontNum.innerText = ticketNum;
+        modalResult.innerText = prizeObj.text;
+
+        playDrumRoll();
+
+        modalOverlay.classList.add('active');
+
+        if (gradeStr.includes('1등')) {
+            setTimeout(() => { 
+                playWinSound(); 
+                launchConfettiStorm(); 
+            }, 500);
+        } else if (gradeStr.includes('2등')) {
+            setTimeout(() => {
+                playWin2Sound();
+            }, 300);
+        } else if (gradeStr.includes('3등')) {
+            setTimeout(() => {
+                playWin3Sound();
+            }, 300);
+        } else if (gradeStr.includes('5등')) {
+            setTimeout(() => {
+                playLoseSound(); 
+            }, 400);
+        }
+
+        let displayTime = 400;
+        if (gradeStr.includes('1등')) displayTime = 8000;
+        else if (gradeStr.includes('2등')) displayTime = 2500; 
+        else if (gradeStr.includes('3등')) displayTime = 1700; 
+        else if (gradeStr.includes('4등')) displayTime = 1000;
+        else displayTime = 700;
+
+        autoCloseTimer = setTimeout(() => {
+            modalOverlay.classList.remove('active');
+        }, displayTime + 800);
+    }
+
+    function updateDashboard(grade) {
+        if (grade === '5등' || currentCounts[grade] === undefined) return;
+        currentCounts[grade]--;
+        
+        let targetId = '';
+        if (grade === '1등') targetId = 'count-1';
+        else if (grade === '2등') targetId = 'count-2';
+        else if (grade === '3등') targetId = 'count-3';
+        else if (grade === '4등') targetId = 'count-4';
+
+        const element = document.getElementById(targetId);
+        if (element) {
+            if (currentCounts[grade] === 0) {
+                element.innerText = '품절 ✕';
+                element.classList.add('sold-out');
+            } else {
+                element.innerText = `${currentCounts[grade]}개`;
+            }
+        }
+    }
+
+    modalCloseBtn.addEventListener('click', () => {
+        clearTimeout(autoCloseTimer);
+        modalOverlay.classList.remove('active');
+    });
+</script>
+</body>
+</html>
