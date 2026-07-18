@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>뱀주사위 게임 v10.0</title>
+    <style>
+        /* 기본 레이아웃 및 텍스트 선택/우클릭 방지 패치 */
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #1e1e24; color: #fff; margin: 0; padding: 15px; overflow: hidden; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+        .container { max-width: 1040px; margin: 0 auto; padding: 15px; background: #2a2a35; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        
+        /* 로비 설정 화면 */
+        .lobby-area { max-width: 500px; margin: 40px auto; background: #23232d; padding: 25px; border-radius: 12px; border: 2px solid #ffcc00; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .lobby-title { font-size: 20px; font-weight: bold; color: #ffcc00; margin-bottom: 20px; text-align: center; }
+        
+        .setup-inputs { display: flex; gap: 8px; align-items: center; margin-bottom: 15px; justify-content: center; }
+        .setup-inputs input { background: #444; color: #fff; text-align: center; width: 140px; height: 35px; padding: 6px; border-radius: 4px; border: none; font-weight: bold; }
+        .setup-inputs select { background: #444; color: #fff; width: 150px; height: 35px; padding: 6px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; }
+        .setup-inputs .btn-main { width: 150px; height: 35px; padding: 6px; border-radius: 4px; background: #ffcc00; color: #111; font-weight: bold; }
+
+        input, select, button { border-radius: 4px; border: none; font-weight: bold; cursor: pointer; box-sizing: border-box; }
+        .btn-danger { background: #ff4a5a; color: white; }
+        .btn-sub { background: #555; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        button:hover { filter: brightness(1.1); }
+        button:disabled { background: #444 !important; color: #777 !important; cursor: not-allowed; }
+
+        .lobby-player-list { background: #343444; border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto; margin-bottom: 20px; }
+        .player-chip { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 6px 12px; border-radius: 4px; margin-bottom: 6px; font-size: 13px; border-left: 4px solid #fff; }
+        .btn-delete { background: none; color: #ff4a5a; padding: 0 5px; font-size: 14px; }
+        .btn-delete:hover { color: #ff1a30; font-size: 16px; }
+
+        /* 인게임 레이아웃 구역 */
+        .game-area { display: none; gap: 15px; justify-content: center; align-items: flex-start; margin-top: 15px; }
+        .game-area.active { display: flex; }
+        
+        /* 세로 636px 설계 고정 보드판 */
+        #board { display: grid; grid-template-columns: repeat(10, 36px); grid-template-rows: repeat(10, 51px); gap: 12px; width: 504px; height: 636px; background: #111; padding: 10px; border-radius: 8px; box-sizing: border-box; overflow: hidden; }
+        
+        /* 슬림 세로형 직사각형 방 매핑 */
+        .cell { width: 36px; height: 51px; border-radius: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; background: #222; position: relative; border: 1px solid #333; padding: 2px; box-sizing: border-box; overflow: visible; }
+        
+        /* 1. 요구사항 반영: 네모칸 내부의 숫자 크기를 훨씬 굵고 크게 확대 (기존 10px -> 14px 볼드) */
+        .cell-number { font-size: 14px; font-weight: 900; color: #999; width: 100%; text-align: left; line-height: 1; margin-bottom: 1px; padding-left: 2px; }
+        .start-cell .cell-number, .finish-cell .cell-number { color: #fff; font-size: 9px; letter-spacing: -1px; text-align: center; padding-left: 0; }
+        
+        /* 여백 위 화살표 배치 */
+        .arrow-indicator { position: absolute; font-size: 16px; color: rgba(0, 240, 255, 0.45); font-weight: bold; pointer-events: none; z-index: 1; text-shadow: 0 0 4px rgba(0, 240, 255, 0.5); }
+        .arrow-right { right: -13px; top: 16px; }
+        .arrow-left { left: -13px; top: 16px; }
+        .arrow-up { top: -14px; left: 8px; }
+
+        /* 기믹 칸 색상 테마 */
+        .start-cell { background: linear-gradient(135deg, #1b4d3e, #2c6b56) !important; border: 1.5px solid #50c878 !important; }
+        .finish-cell { background: linear-gradient(135deg, #4a154b, #6b114d) !important; border: 1.5px solid #ff00aa !important; }
+        .ladder { background: linear-gradient(135deg, #1d3557, #3a6b8c) !important; border: 1px solid #a8dadc; }
+        .snake { background: linear-gradient(135deg, #660000, #a10f19) !important; border: 1px solid #fdf0d5; }
+        
+        /* 2줄 엔터 레이아웃 */
+        .event-tag { font-size: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; color: #fff; text-align: center; width: 100%; box-sizing: border-box; line-height: 1; margin-top: 1px; z-index: 2; }
+        .event-icon { font-size: 10px; }
+        .event-target-text { background: rgba(0,0,0,0.8); padding: 0px 2px; border-radius: 2px; font-size: 10px; font-weight: bold; white-space: nowrap; }
+
+        /* 우측 제어 패널 */
+        .control-panel { width: 340px; height: 636px; display: flex; flex-direction: column; gap: 10px; background: #23232d; padding: 12px; border-radius: 8px; box-sizing: border-box; }
+        .panel-top-btns { display: flex; gap: 8px; width: 100%; }
+        .panel-top-btns button { flex: 1; padding: 6px 0; font-size: 12px; height: 32px; white-space: nowrap; }
+
+        /* 주사위 트레이 영역 */
+        .play-zone { background: #2e2e3a; padding: 8px; border-radius: 6px; text-align: center; border: 1px solid #444; }
+        .turn-display { font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #ffcc00; min-height: 18px; }
+        .dice-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 3px 0; }
+        
+        .dice-box { width: 40px; height: 42px; background: white; color: #1e1e24; border-radius: 6px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.3); overflow: visible; display: flex; justify-content: center; align-items: center; font-size: 46px; line-height: 1; text-align: center; padding-bottom: 5px; }
+        #roll-btn { padding: 6px 0; font-size: 13px; height: 42px; }
+
+        /* 실시간 순위 정보 */
+        .rank-section { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+        .player-list-wrap { flex-grow: 1; overflow-y: auto; background: #343444; border-radius: 5px; min-height: 0; }
+        .player-list { border-collapse: collapse; width: 100%; font-size: 12px; }
+        .player-list th, .player-list td { padding: 6px 4px; border-bottom: 1px solid #444; text-align: center; vertical-align: middle; }
+        .player-list th { background: #111; position: sticky; top: 0; z-index: 10; }
+        .active-player-row { background: rgba(255, 204, 0, 0.15); color: #ffcc00; }
+
+        /* 2. 중도 포기자 전용 비주얼 스타일 (이름 회색화 처리) */
+        .gave-up-row { background: rgba(0, 0, 0, 0.2) !important; color: #666 !important; }
+        .gave-up-row td { color: #666 !important; }
+        .btn-giveup { background: #555; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px; cursor: pointer; transition: 0.2s; }
+        .btn-giveup:hover { background: #ff4a5a; }
+
+        /* 원형 입체 말 배치 컨테이너 */
+        .pawn-container { display: flex; justify-content: center; align-items: center; width: 100%; position: absolute; bottom: 1px; left: 0; box-sizing: border-box; height: 26px; z-index: 5; padding-left: 8px; pointer-events: none; }
+        .pawn { width: 20px; height: 20px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.6); display: inline-flex; justify-content: center; align-items: center; border: 1.5px solid white; position: relative; margin-left: -8px; flex-shrink: 0; font-size: 11px; font-weight: bold; color: #fff; text-shadow: 1px 1px 1px #000; animation: bounce 0.5s infinite alternate; }
+        .pawn::after { content: ''; width: 4px; height: 4px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 3px; opacity: 0.5; }
+        @keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-2px); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- 게임 인원 등록 로비 화면 -->
+    <div class="lobby-area" id="lobby-screen">
+        <div class="lobby-title">🎲 뱀주사위 대결 인원 등록</div>
+        
+        <div class="setup-inputs">
+            <input type="text" id="player-name" placeholder="닉네임 입력">
+            <select id="player-type">
+                <option value="시청자">🕵️‍♀️시청자 팀</option>
+                <option value="방송인">👩‍🎤방송인 팀</option>
+                <option value="개인전">🙋개인전</option>
+                <option value="랜덤">👬팀전(랜덤)</option>
+            </select>
+            <button class="btn-main" onclick="addPlayer()">👤 추가</button>
+        </div>
+
+        <div style="font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #ffcc00;">👥 현재 대기 명단</div>
+        <div class="lobby-player-list" id="lobby-list"></div>
+
+        <button class="btn-success" onclick="startGame()" style="width: 100%; padding: 12px 0; font-size: 15px;">🏁 설정 완료 &amp; 게임 시작</button>
+    </div>
+
+    <!-- 인게임 영역 -->
+    <div class="game-area" id="game-screen">
+        
+        <!-- 왼쪽 구역: 숫자가 훨씬 커져 가독성이 증폭된 보드판 -->
+        <div id="board"></div>
+        
+        <!-- 오른쪽 구역: 제어 컨트롤 패널 -->
+        <div class="control-panel">
+            
+            <!-- 상단 제어 버튼 제어바 -->
+            <div class="panel-top-btns">
+                <button class="btn-sub" id="undo-btn" onclick="undoMove()" disabled>↩️ 한턴 되돌리기</button>
+                <button class="btn-danger" onclick="backToLobby()">⚙️ 초기화(로비)</button>
+            </div>
+
+            <!-- 현재 턴 및 주사위 작동 구역 -->
+            <div class="play-zone">
+                <div class="turn-display" id="turn-info">플레이어를 등록해 주세요.</div>
+                <div class="dice-row">
+                    <!-- 흰색 배경 트레이 정중앙 정렬 주사위 박스 -->
+                    <div class="dice-box" id="dice-view">⚀</div>
+                    <button id="roll-btn" class="btn-main" onclick="startDiceRoll()" style="flex: 1;">🎲 주사위 굴리기</button>
+                </div>
+            </div>
+
+            <!-- 2. 실시간 순위 정보 (포기 열이 우측에 신설된 스코어 테이블) -->
+            <div class="rank-section">
+                <div style="font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #ffcc00;">👥 실시간 순위 정보</div>
+                <div class="player-list-wrap">
+                    <table class="player-list">
+                        <thead>
+                            <tr><th>번호</th><th>소속</th><th>이름</th><th>현재 칸</th><th>관리</th></tr>
+                        </thead>
+                        <tbody id="player-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> <!-- 제어 패널 끝 -->
+    </div> <!-- 게임 영역 끝 -->
+</div> <!-- 컨테이너 끝 -->
+
+<script>
+    const board = document.getElementById('board');
+    const diceView = document.getElementById('dice-view');
+    const turnInfo = document.getElementById('turn-info');
+    const tableBody = document.getElementById('player-table-body');
+    const rollBtn = document.getElementById('roll-btn');
+    const undoBtn = document.getElementById('undo-btn');
+    const lobbyScreen = document.getElementById('lobby-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const lobbyList = document.getElementById('lobby-list');
+
+    const ladders = { 4: 25, 13: 46, 33: 49, 42: 63, 50: 69, 62: 81, 74: 92 };
+    const snakes = { 27: 5, 40: 19, 43: 18, 54: 31, 76: 45, 89: 53, 99: 41 };
+    
+    let players = [];
+    let currentTurnIndex = 0;
+    let isRolling = false;
+    let historyStack = [];
+    // 글로벌 타이머 핸들러 저장소 (로비 강제 리턴 버그 방지용)
+    let diceInterval = null;
+    let diceTimeout = null;
+
+    // 로비 대기 인원 갱신 및 개별 삭제 UI 랜더러
+    function updateLobbyUI() {
+        lobbyList.innerHTML = '';
+        if (players.length === 0) {
+            lobbyList.innerHTML = `<div style="color:#aaa; text-align:center; font-size:12px; padding:10px 0;">등록된 플레이어가 없습니다.</div>`;
+            return;
+        }
+
+        players.forEach((p, idx) => {
+            const chip = document.createElement('div');
+            chip.classList.add('player-chip');
+            
+            let displayNum = idx + 1;
+            let teamLabel = p.type === '랜덤' ? '🎲 랜덤 대기' : p.type;
+            
+            let borderCol = '#fff';
+            if (p.type === '방송인') borderCol = '#00f0ff';
+            else if (p.type === '시청자') borderCol = '#ff00aa';
+            else if (p.type === '개인전') borderCol = '#ffcc00';
+            
+            chip.style.borderLeftColor = borderCol;
+
+            chip.innerHTML = `
+                <span><b>${displayNum}번</b> [${teamLabel}] ${p.name}</span>
+                <button class="btn-delete" onclick="deletePlayer(${idx})">❌</button>
+            `;
+            lobbyList.appendChild(chip);
+        });
+    }
+
+    // 플레이어 신규 대기열 추가
+    function addPlayer() {
+        const nameInput = document.getElementById('player-name');
+        const typeSelect = document.getElementById('player-type');
+        const name = nameInput.value.trim();
+        
+        if (!name) return alert("닉네임을 입력해 주세요.");
+        if (players.some(p => p.name === name)) return alert("이미 대기 명단에 존재하는 닉네임입니다.");
+
+        players.push({
+            name: name,
+            type: typeSelect.value, 
+            position: 1,
+            color: '#fff',
+            isOut: false // [신규 데이터] 포기 여부를 판단할 상태 플래그 기본값
+        });
+
+        nameInput.value = '';
+        updateLobbyUI();
+    }
+
+    // 플레이어 개별 삭제 함수
+    function deletePlayer(index) {
+        players.splice(index, 1);
+        updateLobbyUI();
+    }
+
+    // 게임 시작 연산 장치
+    function startGame() {
+        if (players.length === 0) return alert("최소 1명 이상의 플레이어를 등록해야 게임을 시작할 수 있습니다.");
+
+        players.forEach((p, idx) => {
+            if (p.type === '랜덤') {
+                p.type = Math.random() < 0.5 ? '방송인' : '시청자';
+            }
+            
+            if (p.type === '개인전') {
+                p.color = `hsl(${(idx * 65) % 360}, 100%, 65%)`;
+            } else {
+                const randBright = Math.floor(Math.random() * 60) + 195;
+                p.color = p.type === '방송인' ? `rgb(0, ${randBright}, 255)` : `rgb(255, 0, ${randBright})`;
+            }
+        });
+
+        lobbyScreen.style.display = 'none';
+        gameScreen.classList.add('active');
+
+        generateBoard();
+    }
+
+    // 설정 수정을 위해 로비 리턴 시 작동 중인 타이머 스레드 완전 초기화
+    function backToLobby() {
+        if (!confirm("로비로 돌아가면 현재 게임 상태가 초기화됩니다. 이동하시겠습니까?")) return;
+        
+        if (diceInterval) clearInterval(diceInterval);
+        if (diceTimeout) clearTimeout(diceTimeout);
+        
+        players.forEach(p => {
+            p.position = 1;
+            p.isOut = false; // 포기 상태 복구
+        });
+        currentTurnIndex = 0;
+        historyStack = [];
+        isRolling = false;
+        rollBtn.disabled = false;
+
+        gameScreen.classList.remove('active');
+        lobbyScreen.style.display = 'block';
+        updateLobbyUI();
+    }
+
+    // 1. 대형 숫자가 탑재된 지그재그 보드 및 흐름 화살표 내비게이터 빌더
+    function generateBoard() {
+        board.innerHTML = '';
+        
+        for (let row = 9; row >= 0; row--) {
+            let rowCells = [];
+            for (let col = 0; col < 10; col++) {
+                let cellId = (row * 10) + (row % 2 === 0 ? (10 - col) : (col + 1));
+                rowCells.push(cellId);
+            }
+
+            rowCells.forEach(id => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.id = 'cell-' + id;
+                
+                // 1. 네모칸 내부 숫자 크기 증폭 레이아웃 주입
+                let displayNum = `<span class="cell-number">${id}</span>`;
+                if (id === 1) {
+                    cell.classList.add('start-cell');
+                    displayNum = `<span class="cell-number">시작(1)</span>`;
+                } else if (id === 100) {
+                    cell.classList.add('finish-cell');
+                    displayNum = `<span class="cell-number">도착(100)</span>`;
+                }
+                cell.innerHTML = displayNum;
+
+                if (ladders[id]) {
+                    cell.classList.add('ladder');
+                    cell.innerHTML += `
+                        <div class="event-tag">
+                            <span class="event-icon">🪜</span>
+                            <span class="event-target-text">➔ ${ladders[id]}</span>
+                        </div>
+                    `;
+                } else if (snakes[id]) {
+                    cell.classList.add('snake');
+                    cell.innerHTML += `
+                        <div class="event-tag">
+                            <span class="event-icon">🐍</span>
+                            <span class="event-target-text">➔ ${snakes[id]}</span>
+                        </div>
+                    `;
+                }
+
+                if (id < 100) {
+                    const arrow = document.createElement('span');
+                    arrow.classList.add('arrow-indicator');
+                    
+                    if (id % 10 === 0) {
+                        arrow.innerHTML = '🡩';
+                        arrow.classList.add('arrow-up');
+                    } else {
+                        let currentRow = Math.floor((id - 1) / 10);
+                        if (currentRow % 2 === 0) {
+                            arrow.innerHTML = '🡨';
+                            arrow.classList.add('arrow-left');
+                        } else {
+                            arrow.innerHTML = '🡪';
+                            arrow.classList.add('arrow-right');
+                        }
+                    }
+                    cell.appendChild(arrow);
+                }
+
+                const pawnContainer = document.createElement('div');
+                pawnContainer.classList.add('pawn-container');
+                pawnContainer.id = 'pawn-zone-' + id;
+                cell.appendChild(pawnContainer);
+
+                board.appendChild(cell);
+            });
+        }
+        
+        gameScreen.addEventListener('contextmenu', e => e.preventDefault());
+        updateUI();
+    }
+    // 주사위 텍스트 고속 루프 물리 엔진
+    function startDiceRoll() {
+        if (isRolling) return;
+        
+        // [버그 방지] 생존한 플레이어가 없는 경우 보호 연산
+        const survivors = players.filter(p => !p.isOut);
+        if (survivors.length === 0) return alert("게임에 참여 중인 생존자가 없습니다.");
+        
+        isRolling = true;
+        rollBtn.disabled = true;
+        undoBtn.disabled = true;
+
+        const diceFaces = ['⚅', '⚄', '⚃', '⚂', '⚁', '⚀'];
+        
+        diceInterval = setInterval(() => {
+            const rand = Math.floor(Math.random() * 6);
+            diceView.innerText = diceFaces[rand];
+        }, 100);
+
+        diceTimeout = setTimeout(() => {
+            clearInterval(diceInterval);
+            const diceValue = Math.floor(Math.random() * 6) + 1;
+            diceView.innerText = diceFaces[diceValue - 1];
+
+            setTimeout(() => {
+                moveCurrentPlayer(diceValue);
+            }, 300);
+        }, 4000); 
+    }
+
+    // 플레이어 이동 및 턴 스킵 처리 연산 기믹
+    function moveCurrentPlayer(dice) {
+        let p = players[currentTurnIndex];
+        
+        // 이동 전 스냅샷 딥카피 백업
+        historyStack.push({
+            turnIndex: currentTurnIndex,
+            playersState: JSON.parse(JSON.stringify(players))
+        });
+
+        // 100 이상 즉시 승리 계산
+        let nextPos = p.position + dice;
+
+        if (nextPos >= 100) {
+            p.position = 100;
+        } else {
+            p.position = nextPos;
+            if (ladders[p.position]) {
+                alert(`🚀 [${p.name}] 사다리 고속도로 탑승!! ${p.position}번 ➔ ${ladders[p.position]}번`);
+                p.position = ladders[p.position];
+            } else if (snakes[p.position]) {
+                alert(`💀 [${p.name}] 거대 뱀 습격!! ${p.position}번 ➔ ${snakes[p.position]}번`);
+                p.position = snakes[p.position];
+            }
+        }
+
+        if (p.position === 100) {
+            alert(`🎉🎉 [${p.name}] 플레이어가 100번 칸에 안전하게 도달하여 최종 대승리했습니다!`);
+            resetGame();
+            return;
+        }
+
+        // [핵심] 다음 차례로 가되, 포기한(isOut: true) 사람은 계속 건너뛰는(스킵) 루프 연산
+        setNextTurn();
+        
+        isRolling = false;
+        rollBtn.disabled = false;
+        updateUI();
+    }
+
+    // 2. 실시간 포기(패배) 버튼 처리 함수
+    function playerGiveUp(index) {
+        if (isRolling) return alert("주사위가 돌아가는 중에는 포기할 수 없습니다.");
+        if (players[index].isOut) return;
+
+        if (!confirm(`[${players[index].name}] 플레이어를 정말 포기(실격) 처리할까요?\n이후 순서부터 제외됩니다.`)) return;
+
+        // 포기 전 복구를 대비해 현재 상태 백업
+        historyStack.push({
+            turnIndex: currentTurnIndex,
+            playersState: JSON.parse(JSON.stringify(players))
+        });
+
+        players[index].isOut = true;
+        alert(`🏳️ [${players[index].name}] 플레이어가 게임을 포기했습니다.`);
+
+        // 만약 포기한 사람이 현재 주사위를 던질 차례였다면 다음 사람에게 턴 패스
+        if (currentTurnIndex === index) {
+            setNextTurn();
+        }
+
+        updateUI();
+    }
+
+    // 생존자를 찾아 다음 턴 인덱스를 안전하게 교대하는 연산 모듈
+    function setNextTurn() {
+        const total = players.length;
+        let count = 0;
+        
+        while (count < total) {
+            currentTurnIndex = (currentTurnIndex + 1) % total;
+            if (!players[currentTurnIndex].isOut) {
+                return; // 생존자를 찾았으므로 탈출
+            }
+            count++;
+        }
+    }
+
+    // 한 턴 되돌리기(Undo) 시 상태 및 턴 하이라이트 동기화 복원
+    function undoMove() {
+        if (historyStack.length === 0 || isRolling) return;
+        
+        const lastState = historyStack.pop();
+        currentTurnIndex = lastState.turnIndex;
+        players = lastState.playersState;
+        
+        updateUI();
+    }
+
+    // 판돈 올 초기화 리셋
+    function resetGame() {
+        if (players.length > 0) {
+            players.forEach(p => {
+                p.position = 1;
+                p.isOut = false;
+            });
+        }
+        currentTurnIndex = 0;
+        isRolling = false;
+        historyStack = []; 
+        rollBtn.disabled = false;
+        updateUI();
+    }
+
+    // 캐릭터 말 드로우 및 순위 정보 테이블 리렌더러
+    function updateUI() {
+        document.querySelectorAll('.pawn-container').forEach(el => el.innerHTML = '');
+
+        // 원형 입체 말 투사 (2. 포기자는 보드판에서 영구 은닉 제외 패치)
+        players.forEach((p, idx) => {
+            if (p.isOut) return; // 포기한 사람은 보드판에 말을 그리지 않음
+            
+            const zone = document.getElementById('pawn-zone-' + p.position);
+            if (zone) {
+                const pawn = document.createElement('div');
+                pawn.classList.add('pawn');
+                pawn.style.backgroundColor = p.color;
+                pawn.innerText = idx + 1; 
+                pawn.title = `[${p.type}] ${p.name}`; 
+                zone.appendChild(pawn);
+            }
+        });
+
+        tableBody.innerHTML = '';
+        
+        // 생존한 인원이 있는지 판정
+        const survivors = players.filter(p => !p.isOut);
+        
+        if (players.length > 0) {
+            if (survivors.length === 0) {
+                turnInfo.innerHTML = `<span style="color:#ff4a5a;">🏳️ 모든 플레이어가 포기하여 게임이 종료되었습니다.</span>`;
+            } else {
+                let activePlayer = players[currentTurnIndex];
+                turnInfo.innerHTML = `📢 현재 턴: <span style="color:${activePlayer.color}">[${activePlayer.type}] ${currentTurnIndex + 1}번 ${activePlayer.name}</span>`;
+            }
+            
+            // 2. 실시간 순위 대시보드 리스트 테이블 및 포기 버튼 주입
+            players.forEach((p, idx) => {
+                const row = document.createElement('tr');
+                
+                // 포기 여부 및 턴에 따른 조건부 클래스 바인딩
+                if (p.isOut) {
+                    row.classList.add('gave-up-row');
+                } else if (idx === currentTurnIndex && survivors.length > 0) {
+                    row.classList.add('active-player-row');
+                }
+                
+                let posText = p.position + " 번 칸";
+                if (p.isOut) posText = "❌ 포기";
+                else if (p.position === 1) posText = "시작 (1)";
+                else if (p.position === 100) posText = "도착 (100)";
+                
+                // 포기 버튼 활성화/비활성화 분기 가두리
+                let actionBtn = `<button class="btn-giveup" onclick="playerGiveUp(${idx})">🏳️ 포기</button>`;
+                if (p.isOut) actionBtn = `<span style="font-size:11px; font-weight:bold; color:#555;">탈락됨</span>`;
+
+                row.innerHTML = `
+                    <td style="font-weight:bold; color:${p.isOut ? '#555' : '#ffcc00'};">${idx + 1}번</td>
+                    <td style="color:${p.isOut ? '#555' : p.color}; font-weight:bold;">${p.type}</td>
+                    <td>${p.name}</td>
+                    <td><b>${posText}</b></td>
+                    <td>${actionBtn}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        undoBtn.disabled = (historyStack.length === 0 || isRolling);
+    }
+
+    // 초동 로비 명단 레이아웃 빌드
+    updateLobbyUI();
+</script>
+</body>
+</html>
