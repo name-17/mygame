@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 주사위 굴리기</title>
+    <style>
+        /* 기본 스타일 및 화면 중앙 정렬 */
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            font-family: sans-serif;
+            margin: 0;
+        }
+
+        /* 3D 공간 연출을 위한 컨테이너 */
+        .scene {
+            width: 100px;
+            height: 100px;
+            perspective: 400px;
+            margin-bottom: 20px;
+        }
+
+        /* 주사위 구조 및 3D 속성 설정 */
+        .dice {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1s cubic-bezier(0.2, 0.8, 0.3, 1);
+        }
+
+        /* 주사위의 모든 면 공통 스타일 */
+        .face {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            box-sizing: border-box;
+            padding: 10px;
+            display: grid;
+            grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1), 0 5px 10px rgba(0,0,0,0.1);
+        }
+
+        /* 주사위 눈금(점) 스타일 */
+        .dot {
+            display: block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #333;
+            align-self: center;
+            justify-self: center;
+        }
+        /* 1번 눈금은 전통적으로 붉은색 배치 */
+        .face-1 .dot { background-color: #e74c3c; width: 24px; height: 24px; }
+
+        /* 주사위의 6개 면 3D 공간 배치 좌표 지정 */
+        .face-1 { transform: rotateY(0deg) translateZ(50px); }
+        .face-2 { transform: rotateY(90deg) translateZ(50px); }
+        .face-3 { transform: rotateX(90deg) translateZ(50px); }
+        .face-4 { transform: rotateX(-90deg) translateZ(50px); }
+        .face-5 { transform: rotateY(-90deg) translateZ(50px); }
+        .face-6 { transform: rotateY(180deg) translateZ(50px); }
+
+        /* CSS Grid를 활용한 주사위 눈금 정렬 레이아웃 */
+        .face-1 .dot { grid-area: 2 / 2; }
+        
+        .face-2 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-2 .dot:nth-child(2) { grid-area: 3 / 3; }
+        
+        .face-3 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-3 .dot:nth-child(2) { grid-area: 2 / 2; }
+        .face-3 .dot:nth-child(3) { grid-area: 3 / 3; }
+        
+        .face-4 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-4 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-4 .dot:nth-child(3) { grid-area: 3 / 1; }
+        .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
+        
+        .face-5 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-5 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-5 .dot:nth-child(3) { grid-area: 2 / 2; }
+        .face-5 .dot:nth-child(4) { grid-area: 3 / 1; }
+        .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+        
+        .face-6 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-6 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-6 .dot:nth-child(3) { grid-area: 2 / 1; }
+        .face-6 .dot:nth-child(4) { grid-area: 2 / 3; }
+        .face-6 .dot:nth-child(5) { grid-area: 3 / 1; }
+        .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
+
+        /* 결과 창 스타일 */
+        .result-box {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+            height: 35px;
+            margin-bottom: 25px;
+            transition: all 0.3s;
+        }
+
+        /* 작동 버튼 스타일 */
+        button {
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <!-- 주사위 그래픽 구역 -->
+    <div class="scene">
+        <div class="dice" id="dice">
+            <div class="face face-1"><span class="dot"></span></div>
+            <div class="face face-2"><span class="dot"></span><span class="dot"></span></div>
+            <div class="face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        </div>
+    </div>
+
+    <!-- 결과 메시지 표시 구역 -->
+    <div class="result-box" id="resultText">주사위를 던져보세요!</div>
+
+    <!-- 실행 버튼 -->
+    <button id="rollBtn" onclick="rollDice()">주사위 던지기</button>
+
+    <script>
+        // 이전 회전 각도를 저장할 전역 변수 (누적 회전용)
+        let currentX = 0;
+        let currentY = 0;
+
+        function rollDice() {
+            const dice = document.getElementById('dice');
+            const button = document.getElementById('rollBtn');
+            const resultText = document.getElementById('resultText');
+            
+            // 버튼 비활성화 및 안내 문구 초기화
+            button.disabled = true;
+            resultText.innerText = "데굴데굴...";
+            resultText.style.color = "#7f8c8d";
+
+            // 1부터 6까지 무작위 숫자 생성
+            const result = Math.floor(Math.random() * 6) + 1;
+
+            // 각 눈금이 정면을 보게 만드는 기본 기준 각도
+            let targetX = 0;
+            let targetY = 0;
+
+            switch (result) {
+                case 1: targetX = 0;   targetY = 0;   break; // 앞면
+                case 2: targetX = 0;   targetY = -90; break; // 우측면
+                case 3: targetX = -90; targetY = 0;   break; // 윗면
+                case 4: targetX = 90;  targetY = 0;   break; // 아랫면
+                case 5: targetX = 0;   targetY = 90;  break; // 좌측면
+                case 6: targetX = 0;   targetY = 180; break; // 뒷면
+            }
+
+            // [수정 핵심] 매번 최소 3바퀴(1080도) 이상 더 굴러가도록 회전수를 누적 계산
+            // 이전 각도에서 가장 가까운 목표 각도를 찾고, 거기에 1080도를 더해 무조건 많이 돌게 만듭니다.
+            currentX = currentX + (targetX - (currentX % 360)) + 1080;
+            currentY = currentY + (targetY - (currentY % 360)) + 1080;
+
+            // 약간의 불규칙한 흔들림 효과 추가 (더 자연스러운 연출)
+            const randomExtraX = (Math.random() - 0.5) * 20;
+            const randomExtraY = (Math.random() - 0.5) * 20;
+
+            // 주사위 회전 애니메이션 실행
+            dice.style.transform = `rotateX(${currentX + randomExtraX}deg) rotateY(${currentY + randomExtraY}deg)`;
+
+            // 1초 후 애니메이션이 끝나면 결과 출력 및 버튼 재활성화
+            setTimeout(() => {
+                resultText.innerText = `🎲 ${result}이(가) 나왔습니다!`;
+                resultText.style.color = "#2e7d32"; // 초록색 강조
+                button.disabled = false;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
