@@ -73,13 +73,14 @@
     <h1>사다리타기 게임</h1>
     <div class="setup-section">
         <label for="line-count" style="font-weight: bold; font-size: 15px; color: #a0a0ba;">세로줄 개수: </label>
-        <input type="number" id="line-count" min="2" max="10" value="4" style="width: 55px; height: 42px; padding: 0 10px; font-weight: bold; font-size: 15px; background: #2a2a36; color: #fff; border: 2px solid #555; border-radius: 8px; box-sizing: border-box; vertical-align: middle; text-align: center;">
+        <input type="number" id="line-count" min="3" max="10" value="4" style="width: 55px; height: 42px; padding: 0 10px; font-weight: bold; font-size: 15px; background: #2a2a36; color: #fff; border: 2px solid #555; border-radius: 8px; box-sizing: border-box; vertical-align: middle; text-align: center;">
         <button class="create-btn" onclick="createLadder()">새로 만들기</button>
     </div>
     <div class="control-section">
         <button class="accent-btn" onclick="generateHiddenBridges()">히든 가로줄 추가</button>
     </div>
     <div id="ladder-board" class="ladder-container"></div>
+
     <script>
         let isBlindOpen = false; 
 
@@ -89,7 +90,8 @@
             const count = parseInt(document.getElementById('line-count').value);
             isBlindOpen = false; 
             board.innerHTML = '';
-            if (count < 2) { alert('세로줄은 최소 2개 이상이어야 합니다.'); return; }
+            
+            if (count < 3) { alert('세로줄은 최소 3개 이상이어야 합니다.'); return; }
             
             for (let i = 0; i < count; i++) {
                 const group = document.createElement('div');
@@ -120,7 +122,6 @@
             blind.id = 'blind-gate'; blind.className = 'blind-box'; blind.innerText = '입력한 숫자만큼 가로줄 랜덤추가'; board.appendChild(blind);
         }
 
-        // [교정] 요청하신 기본 가로줄의 생성 범위를 3%~17%, 83%~97%로 재수정
         function generateDefaultBridges(count) {
             let prevTopBridgeY = -100;
             let prevBotBridgeY = -100;
@@ -157,7 +158,6 @@
                 currentLine.appendChild(bottomBridge);
             }
         }
-
         function generateHiddenBridges() {
             const count = parseInt(document.getElementById('line-count').value);
             const oldHiddenBridges = document.querySelectorAll('.hidden-bridge');
@@ -177,7 +177,6 @@
                     let randomTop; let isTooClose; let attempts = 0;
                     do {
                         isTooClose = false; 
-                        // [보완] 가림막 뒤(20%~80%) 영역 내부에 완벽히 숨도록 난수 범위 세팅(23%~77%)
                         randomTop = Math.floor(Math.random() * 55) + 23; 
                         
                         for (let k = 0; k < currentLineTops.length; k++) { 
