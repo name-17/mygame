@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 주사위 굴리기 (멀티)</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            font-family: sans-serif;
+            margin: 0;
+        }
+        /* 개수 설정 상단 레이아웃 */
+        .config-box {
+            margin-bottom: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        .config-box label {
+            margin: 0 12px;
+            cursor: pointer;
+        }
+        /* 주사위 간격을 60px로 여유롭게 조정 */
+        .dice-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 60px; 
+            min-height: 140px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+        .scene {
+            width: 100px;
+            height: 100px;
+            perspective: 600px;
+        }
+        /* 라디오 버튼 선택에 따른 주사위 숨김 클래스 */
+        .scene.hidden {
+            display: none;
+        }
+        .dice {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .face {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            border: 2px solid #ccc;
+            border-radius: 15px;
+            box-sizing: border-box;
+            padding: 10px;
+            display: grid;
+            grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1), 0 5px 10px rgba(0,0,0,0.1);
+            backface-visibility: hidden;
+        }
+        .dot {
+            display: block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #333;
+            align-self: center;
+            justify-self: center;
+        }
+        .face-1 .dot {
+            background-color: #e74c3c;
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* 원본의 완벽했던 3D 공간 배치 공식 그대로 유지 */
+        .face-1 { transform: rotateY(0deg) translateZ(50px); }
+        .face-2 { transform: rotateY(90deg) translateZ(50px); }
+        .face-3 { transform: rotateX(90deg) translateZ(50px); }
+        .face-4 { transform: rotateX(-90deg) translateZ(50px); }
+        .face-5 { transform: rotateY(-90deg) translateZ(50px); }
+        .face-6 { transform: rotateY(180deg) translateZ(50px); }
+
+        /* 원본 눈금 Grid 배치 그대로 유지 */
+        .face-1 .dot { grid-area: 2 / 2; }
+        .face-2 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-2 .dot:nth-child(2) { grid-area: 3 / 3; }
+        .face-3 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-3 .dot:nth-child(2) { grid-area: 2 / 2; }
+        .face-3 .dot:nth-child(3) { grid-area: 3 / 3; }
+        .face-4 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-4 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-4 .dot:nth-child(3) { grid-area: 3 / 1; }
+        .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
+        .face-5 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-5 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-5 .dot:nth-child(3) { grid-area: 2 / 2; }
+        .face-5 .dot:nth-child(4) { grid-area: 3 / 1; }
+        .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+        .face-6 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-6 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-6 .dot:nth-child(3) { grid-area: 2 / 1; }
+        .face-6 .dot:nth-child(4) { grid-area: 2 / 3; }
+        .face-6 .dot:nth-child(5) { grid-area: 3 / 1; }
+        .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
+
+        .result-box {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+            height: 35px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        button {
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="config-box">
+        주사위 개수: 
+        <label><input type="radio" name="diceCount" value="1" checked onchange="updateDiceCount()"> 1개</label>
+        <label><input type="radio" name="diceCount" value="2" onchange="updateDiceCount()"> 2개</label>
+        <label><input type="radio" name="diceCount" value="3" onchange="updateDiceCount()"> 3개</label>
+    </div>
+
+    <div class="dice-container">
+        <!-- 첫 번째 주사위 -->
+        <div class="scene" id="scene1">
+            <div class="dice" id="dice1">
+                <div class="face face-1"><span class="dot"></span></div>
+                <div class="face face-2"><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            </div>
+        </div>
+        <!-- 두 번째 주사위 -->
+        <div class="scene hidden" id="scene2">
+            <div class="dice" id="dice2">
+                <div class="face face-1"><span class="dot"></span></div>
+                <div class="face face-2"><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            </div>
+        </div>
+        <!-- 세 번째 주사위 -->
+        <div class="scene hidden" id="scene3">
+            <div class="dice" id="dice3">
+                <div class="face face-1"><span class="dot"></span></div>
+                <div class="face face-2"><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-box" id="resultText">주사위를 던져보세요!</div>
+    <button id="rollBtn" onclick="rollAllDice()">주사위 던지기</button>
+
+    <script>
+        let rollCount = 0;
+
+        function updateDiceCount() {
+            const count = parseInt(document.querySelector('input[name="diceCount"]:checked').value);
+            const scene2 = document.getElementById('scene2');
+            const scene3 = document.getElementById('scene3');
+            const resultText = document.getElementById('resultText');
+            
+            if (count >= 2) scene2.classList.remove('hidden');
+            else scene2.classList.add('hidden');
+
+            if (count === 3) scene3.classList.remove('hidden');
+            else scene3.classList.add('hidden');
+
+            resultText.innerText = "주사위를 던져보세요!";
+            resultText.style.color = "#2c3e50";
+        }
+
+        // 원본과 100% 동일한 각도 함수
+        function getTargetAngles(result) {
+            let targetX = 0;
+            let targetY = 0;
+            let targetZ = 0;
+            switch (result) {
+                case 1: targetX = 0; targetY = 0; targetZ = 0; break;
+                case 2: targetX = 0; targetY = -90; targetZ = 0; break;
+                case 3: targetX = -90; targetY = 0; targetZ = 0; break;
+                case 4: targetX = 90; targetY = 0; targetZ = 0; break;
+                case 5: targetX = 0; targetY = 90; targetZ = 0; break;
+                case 6: targetX = 0; targetY = 180; targetZ = 0; break;
+            }
+            return { targetX, targetY, targetZ };
+        }
+
+        function animateDice(diceId, result) {
+            const dice = document.getElementById(diceId);
+            const target = getTargetAngles(result);
+
+            // 원본의 누적 스핀 공식 완전 복구
+            const extraSpins = rollCount * 1440; 
+
+            // 원본의 미세 무작위 흔들림 범위(-5~+5) 완전 복구
+            const finalX = target.targetX + extraSpins + (Math.random() * 10 - 5);
+            const finalY = target.targetY + extraSpins + (Math.random() * 10 - 5);
+            const finalZ = target.targetZ + (Math.random() * 10 - 5);
+
+            // 원본의 3D 축 변형 문법 그대로 적용
+            dice.style.transform = `rotateX(${finalX}deg) rotateY(${finalY}deg) rotateZ(${finalZ}deg)`;
+        }
+
+        function rollAllDice() {
+            const button = document.getElementById('rollBtn');
+            const resultText = document.getElementById('resultText');
+            const count = parseInt(document.querySelector('input[name="diceCount"]:checked').value);
+
+            button.disabled = true;
+            resultText.innerText = "데굴데굴...";
+            resultText.style.color = "#7f8c8d";
+
+            rollCount++;
+
+            // 개별 주사위 계산
+            const res1 = Math.floor(Math.random() * 6) + 1;
+            animateDice('dice1', res1);
+
+            let res2 = 0;
+            if (count >= 2) {
+                res2 = Math.floor(Math.random() * 6) + 1;
+                animateDice('dice2', res2);
+            }
+
+            let res3 = 0;
+            if (count === 3) {
+                res3 = Math.floor(Math.random() * 6) + 1;
+                animateDice('dice3', res3);
+            }
+
+            // 개수에 맞는 다중 텍스트 결과 출력
+            setTimeout(() => {
+                if (count === 1) {
+                    resultText.innerText = `🎲 결과: ${res1}`;
+                } else if (count === 2) {
+                    resultText.innerText = `🎲 결과: ${res1} + ${res2} = 합계 ${res1 + res2}`;
+                } else {
+                    resultText.innerText = `🎲 결과: ${res1} + ${res2} + ${res3} = 합계 ${res1 + res2 + res3}`;
+                }
+                resultText.style.color = "#2e7d32";
+                button.disabled = false;
+            }, 1200);
+        }
+    </script>
+</body>
+</html>
