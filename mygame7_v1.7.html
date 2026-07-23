@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>추억의 문방구 행운복권</title>
+    <!-- 복권 내외 전체를 굵고 깔끔한 고딕 스타일로 통일하기 위한 구글 폰트 연동 -->
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <style>
+        body {
+            background-color: #fcecd2;
+            font-family: 'Do Hyeon', 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-image: radial-gradient(#e0cda9 10%, transparent 10%);
+            background-size: 20px 20px;
+        }
+        .retro-title-box {
+            background-color: #ffd43b;
+            border: 6px solid #000;
+            padding: 10px 40px;
+            text-align: center;
+            box-shadow: 6px 6px 0px #b33939;
+            margin-bottom: 20px;
+            transform: rotate(-1deg);
+        }
+        h1 {
+            margin: 0;
+            color: #b33939;
+            font-size: 42px;
+            letter-spacing: 2px;
+            -webkit-text-stroke: 1.5px #000;
+            text-shadow: 3px 3px 0px #fff;
+        }
+        .main-game-layout {
+            display: flex;
+            gap: 25px;
+            width: 100%;
+            max-width: 1100px;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        .setup-container {
+            background-color: #4b6584;
+            padding: 20px;
+            border: 5px solid #000;
+            border-radius: 0px;
+            box-shadow: 6px 6px 0px #2f3640;
+            width: 360px;
+            flex-shrink: 0;
+            color: #fff;
+        }
+        .setup-container h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #ffd43b;
+            text-align: center;
+            font-size: 22px;
+            letter-spacing: 1px;
+            border-bottom: 3px dashed #fff;
+            padding-bottom: 10px;
+        }
+        .setup-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+            font-size: 16px;
+            white-space: nowrap;
+        }
+        .setup-row span.label-tag {
+            width: 35px;
+            flex-shrink: 0;
+        }
+        .setup-row input[type="text"] {
+            flex: 1;
+            min-width: 120px;
+            padding: 6px;
+            border: 3px solid #000;
+            font-family: 'Do Hyeon', sans-serif;
+            font-size: 15px;
+            background-color: #fff;
+        }
+        .setup-row input[type="number"] {
+            width: 45px;
+            padding: 6px;
+            border: 3px solid #000;
+            text-align: center;
+            font-family: 'Do Hyeon', sans-serif;
+            font-size: 15px;
+            background-color: #ffd43b;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .setup-row span.unit-tag {
+            width: 15px;
+            flex-shrink: 0;
+        }
+        .count-summary {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 15px 0;
+            background-color: #000;
+            padding: 8px;
+            color: #ff4757;
+            border: 2px solid #fff;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 20px;
+            color: #fff;
+            border: 3px solid #000;
+            cursor: pointer;
+            font-family: 'Do Hyeon', sans-serif;
+            box-shadow: 3px 3px 0px #000;
+            transition: all 0.1s ease;
+        }
+        button:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0px #000;
+        }
+        .btn-save {
+            background-color: #20bf6b;
+            width: 100%;
+        }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            flex-grow: 1;
+            max-width: 720px;
+            background-color: #b33939;
+            border: 6px solid #000;
+            padding: 20px;
+            box-shadow: 8px 8px 0px #4b1a1a;
+            position: relative;
+        }
+        .lottery-cell {
+            position: relative;
+            aspect-ratio: 1.55 / 1; /* 가로대비 세로 높이를 10% 축소 세팅 */
+            overflow: hidden;
+            border: 3px dashed #b33939;
+            cursor: pointer;
+        }
+
+        /* 스피또 복권의 하늘색 위조방지 등고선/물결 패턴 매칭 */
+        .prize-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            text-align: center;
+            user-select: none;
+            
+            background-color: #aed9e6;
+            background-image: 
+                repeating-radial-gradient(circle at 10% 10%, transparent 0, transparent 4px, rgba(58,135,166,0.2) 4px, rgba(58,135,166,0.2) 6px),
+                repeating-radial-gradient(circle at 90% 80%, transparent 0, transparent 6px, rgba(58,135,166,0.15) 6px, rgba(58,135,166,0.15) 9px);
+            background-blend-mode: multiply;
+            padding: 4px;
+        }
+
+        .lottery-cell-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 숫자의 윗선과 '등' 글자의 상단을 칼같이 일치시키는 상단(flex-start) 정렬 구성 */
+        .lottery-num-row {
+            display: flex;
+            align-items: flex-start; 
+            justify-content: center;
+            gap: 1px;
+            margin-bottom: 3px;
+        }
+        .lottery-main-num {
+            font-family: 'Do Hyeon', sans-serif;
+            font-weight: bold; 
+            font-size: 34px; 
+            color: #173324;
+            line-height: 0.85; /* 글자가 아래로 쳐지지 않도록 타이트하게 고정 */
+        }
+        .lottery-sub-txt {
+            font-family: 'Do Hyeon', sans-serif;
+            font-weight: bold; 
+            font-size: 14px; 
+            color: #173324;
+            line-height: 0.95; /* 상단 한계선 정렬 매칭을 위해 계산된 라인 하이트 */
+        }
+
+        .lottery-prize-won {
+            font-family: 'Do Hyeon', sans-serif;
+            font-weight: bold; 
+            font-size: 13px; 
+            color: #173324;
+            letter-spacing: -0.5px;
+            margin-top: 4px;
+            line-height: 1.1;
+            word-break: keep-all;
+            opacity: 0.95;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        .modal-wrapper {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10000;
+        }
+        .modal-overlay.active .modal-wrapper {
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .modal-content {
+            position: relative;
+            width: 500px;
+            height: 340px;
+            border: 8px solid #000;
+            overflow: hidden;
+            box-shadow: 12px 12px 0px #b33939;
+        }
+        
+        .modal-prize-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            text-align: center;
+            user-select: none;
+            background-color: #aed9e6;
+            background-image: 
+                repeating-radial-gradient(circle at 10% 10%, transparent 0, transparent 8px, rgba(58,135,166,0.2) 8px, rgba(58,135,166,0.2) 12px),
+                repeating-radial-gradient(circle at 90% 80%, transparent 0, transparent 12px, rgba(58,135,166,0.15) 12px, rgba(58,135,166,0.15) 18px);
+            background-blend-mode: multiply;
+            padding: 20px;
+        }
+        
+        /* 모달 팝업 내부용 상단 수평 맞춤 스케일 세팅 */
+        .modal-prize-text .lottery-main-num { font-size: 82px; font-weight: bold; }
+        .modal-prize-text .lottery-sub-txt { font-size: 32px; font-weight: bold; }
+        .modal-prize-text .lottery-prize-won { font-size: 28px; font-weight: bold; margin-top: 15px; }
+
+        #modalCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .btn-close {
+            background-color: #ffd43b;
+            color: #000;
+            font-size: 22px;
+            padding: 12px 30px;
+            z-index: 10001;
+            box-shadow: 4px 4px 0px #000;
+        }
+        #confettiCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 10005;
+            display: none;
+        }
+        @media (max-width: 900px) {
+            .main-game-layout {
+                flex-direction: column;
+                align-items: center;
+            }
+            .setup-container {
+                width: 100%;
+                max-width: 700px;
+                box-sizing: border-box;
+            }
+            .board-grid {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="retro-title-box">
+        <h1>골목길 추억의 행운복권</h1>
+    </div>
+    <div class="main-game-layout">
+        <div class="setup-container">
+            <h3>대포상 수량 설정 (총 50개)</h3>
+            <div id="setupForm">
+                <div class="setup-row">
+                    <span class="label-tag">1등</span>
+                    <input type="text" class="p-text" value="🥇 특등상: 대왕 왕잉어엿">
+                    <input type="number" class="p-count" value="1" min="0" onchange="calcTotal()"><span class="unit-tag">개</span>
+                </div>
+                <div class="setup-row">
+                    <span class="label-tag">2등</span>
+                    <input type="text" class="p-text" value="🥈 2등상: 왕조립 로보트">
+                    <input type="number" class="p-count" value="3" min="0" onchange="calcTotal()"><span class="unit-tag">개</span>
+                </div>
+                <div class="setup-row">
+                    <span class="label-tag">3등</span>
+                    <input type="text" class="p-text" value="🥉 3등상: 차카니 세트">
+                    <input type="number" class="p-count" value="6" min="0" onchange="calcTotal()"><span class="unit-tag">개</span>
+                </div>
+                <div class="setup-row">
+                    <span class="label-tag">4등</span>
+                    <input type="text" class="p-text" value="🍬 군것질: 아폴로 빨대">
+                    <input type="number" class="p-count" value="10" min="0" onchange="calcTotal()"><span class="unit-tag">개</span>
+                </div>
+                <div class="setup-row">
+                    <span class="label-tag">꽝!</span>
+                    <input type="text" class="p-text" value="😭 다음 기회에 (눈물)">
+                    <input type="number" class="p-count" value="30" min="0" onchange="calcTotal()"><span class="unit-tag">개</span>
+                </div>
+            </div>
+            <div class="count-summary" id="totalDisplay">종합 수량: 50 / 50 개</div>
+            <button class="btn-save" onclick="generateBoard()">새로시작 (초기화)</button>
+        </div>
+        <div class="board-grid" id="boardGrid"></div>
+    </div>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-wrapper">
+            <div class="modal-content">
+                <div class="modal-prize-text" id="modalPrizeText"></div>
+                <canvas id="modalCanvas"></canvas>
+            </div>
+            <button class="btn-close" onclick="closeModal()">닫기</button>
+        </div>
+    </div>
+    <canvas id="confettiCanvas"></canvas>
+
+    <script>
+        const boardGrid = document.getElementById('boardGrid');
+        const totalDisplay = document.getElementById('totalDisplay');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalPrizeText = document.getElementById('modalPrizeText');
+        const modalCanvas = document.getElementById('modalCanvas');
+        const modalCtx = modalCanvas.getContext('2d');
+        const confettiCanvas = document.getElementById('confettiCanvas');
+        const confettiCtx = confettiCanvas.getContext('2d');
+        const TOTAL_CELLS = 50;
+
+        let boardData = [];
+        let activeIndex = null;
+        let isDrawing = false;
+        let isScratched = false;
+        let lastX = 0;
+        let lastY = 0;
+        let confettiParticles = [];
+        let confettiAnimationId = null;
+        let confettiActive = false;
+
+        function calcTotal() {
+            const counts = document.querySelectorAll('.p-count');
+            let total = 0;
+            counts.forEach(input => {
+                total += parseInt(input.value) || 0;
+            });
+            totalDisplay.innerText = `종합 수량: ${total} / ${TOTAL_CELLS} 개`;
+            totalDisplay.style.color = (total !== TOTAL_CELLS) ? '#ff4757' : '#20bf6b';
+            return total;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function parsePrizeToLotteryHTML(rawText) {
+            let numPart = "꽝"; 
+            let unitPart = "";  
+            let prizeItemText = rawText; 
+
+            const inputs = document.querySelectorAll('.p-text');
+            const rows = document.querySelectorAll('.setup-row');
+            
+            for(let i = 0; i < inputs.length; i++) {
+                if(inputs[i].value.trim() === rawText) {
+                    const tagSpan = rows[i].querySelector('.label-tag');
+                    if(tagSpan) {
+                        let fullTag = tagSpan.innerText.trim(); 
+                        if(fullTag.includes("등")) {
+                            numPart = fullTag.replace("등", ""); 
+                            unitPart = "등"; 
+                        } else {
+                            numPart = fullTag;
+                            unitPart = "";
+                        }
+                    }
+                    break;
+                }
+            }
+
+            return `
+                <div class="lottery-cell-wrapper">
+                    <div class="lottery-num-row">
+                        <span class="lottery-main-num">${numPart}</span>
+                        <span class="lottery-sub-txt">${unitPart}</span>
+                    </div>
+                    <div class="lottery-prize-won">${prizeItemText}</div>
+                </div>
+            `;
+        }
+
+        function drawCloverShape(ctx, cx, cy, size, color) {
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color;
+            
+            for (let i = 0; i < 4; i++) {
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate((i * 90 * Math.PI) / 180);
+                
+                ctx.beginPath();
+                ctx.moveTo(0, -size * 0.15);
+                ctx.bezierCurveTo(-size * 0.5, -size * 0.6, -size * 0.4, -size * 1.0, 0, -size * 0.65);
+                ctx.bezierCurveTo(size * 0.4, -size * 1.0, size * 0.5, -size * 0.6, 0, -size * 0.15);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.lineWidth = size * 0.1;
+            ctx.lineCap = 'round';
+            ctx.moveTo(cx, cy + size * 0.1);
+            ctx.quadraticCurveTo(cx + size * 0.15, cy + size * 0.5, cx + size * 0.3, cy + size * 0.8);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function generateBoard() {
+            if (calcTotal() !== TOTAL_CELLS) {
+                alert(`수량의 총합이 정확히 ${TOTAL_CELLS}개가 되어야 새 판을 짤 수 있습니다!`);
+                return;
+            }
+            stopConfetti();
+            const textInputs = document.querySelectorAll('.p-text');
+            const countInputs = document.querySelectorAll('.p-count');
+            let prizePool = [];
+            for (let i = 0; i < textInputs.length; i++) {
+                const text = textInputs[i].value.trim();
+                const count = parseInt(countInputs[i].value) || 0;
+                for (let j = 0; j < count; j++) {
+                    prizePool.push(text);
+                }
+            }
+            prizePool = shuffle(prizePool);
+            boardGrid.innerHTML = '';
+            boardData = [];
+            for (let i = 0; i < TOTAL_CELLS; i++) {
+                boardData.push({
+                    prize: prizePool[i],
+                    scratchedCanvasData: null,
+                    isOpened: false,
+                    is1stChecked: false
+                });
+                const cell = document.createElement('div');
+                cell.className = 'lottery-cell';
+                cell.setAttribute('onclick', `openModal(${i})`);
+
+                const prizeText = document.createElement('div');
+                prizeText.className = 'prize-text';
+                prizeText.innerHTML = parsePrizeToLotteryHTML(prizePool[i]);
+                cell.appendChild(prizeText);
+
+                const canvas = document.createElement('canvas');
+                cell.appendChild(canvas);
+                boardGrid.appendChild(cell);
+                
+                setTimeout((c => () => initMiniCanvas(c, i + 1))(canvas), 0);
+            }
+        }
+
+        function initMiniCanvas(canvas, number) {
+            const ctx = canvas.getContext('2d');
+            const parent = canvas.parentElement;
+            const width = canvas.offsetWidth || (parent ? parent.clientWidth : 120);
+            const height = canvas.offsetHeight || (parent ? parent.clientHeight : 77);
+            
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            ctx.scale(2, 2);
+            
+            ctx.fillStyle = '#c0c0c0';
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(3, 3, width - 6, height - 6);
+            
+            drawCloverShape(ctx, width / 2, height / 2, 22, '#20bf6b');
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px "Do Hyeon", Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 4;
+            ctx.strokeText(number, width / 2, height / 2);
+            ctx.fillText(number, width / 2, height / 2);
+        }
+
+        function openModal(index) {
+            activeIndex = index;
+            const data = boardData[index];
+            modalPrizeText.innerHTML = parsePrizeToLotteryHTML(data.prize);
+            modalOverlay.style.display = 'block';
+            setTimeout(() => {
+                modalOverlay.classList.add('active');
+            }, 10);
+            modalCanvas.width = 500;
+            modalCanvas.height = 340;
+            isScratched = false;
+            if (!data.isOpened) {
+                modalCtx.globalCompositeOperation = 'source-over';
+                
+                modalCtx.fillStyle = '#c0c0c0';
+                modalCtx.fillRect(0, 0, modalCanvas.width, modalCanvas.height);
+                modalCtx.strokeStyle = '#000000';
+                modalCtx.lineWidth = 6;
+                modalCtx.strokeRect(10, 10, modalCanvas.width - 20, modalCanvas.height - 20);
+                
+                drawCloverShape(modalCtx, modalCanvas.width / 2, modalCanvas.height / 2, 75, '#20bf6b');
+                
+                modalCtx.fillStyle = '#ffffff';
+                modalCtx.font = 'bold 42px "Do Hyeon", Arial';
+                modalCtx.textAlign = 'center';
+                modalCtx.textBaseline = 'middle';
+                modalCtx.strokeStyle = '#000000';
+                modalCtx.lineWidth = 6;
+                modalCtx.strokeText(`${index + 1}번 종이`, modalCanvas.width / 2, modalCanvas.height / 2);
+                modalCtx.fillText(`${index + 1}번 종이`, modalCanvas.width / 2, modalCanvas.height / 2);
+            } else if (data.scratchedCanvasData) {
+                modalCtx.putImageData(data.scratchedCanvasData, 0, 0);
+            }
+        }
+
+        function closeModal() {
+            if (activeIndex !== null) {
+                if (isScratched) {
+                    boardData[activeIndex].isOpened = true;
+                    boardData[activeIndex].scratchedCanvasData = modalCtx.getImageData(0, 0, modalCanvas.width, modalCanvas.height);
+                    const miniCanvases = document.querySelectorAll('.board-grid canvas');
+                    const miniCanvas = miniCanvases[activeIndex];
+                    const miniCtx = miniCanvas.getContext('2d');
+                    miniCtx.save();
+                    miniCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
+                    miniCtx.drawImage(modalCanvas, 0, 0, modalCanvas.width, modalCanvas.height, 0, 0, miniCanvas.width, miniCanvas.height);
+                    miniCtx.restore();
+                }
+            }
+            modalOverlay.classList.remove('active');
+            setTimeout(() => {
+                modalOverlay.style.display = 'none';
+                activeIndex = null;
+                stopConfetti();
+            }, 300);
+        }
+
+        function getCoords(e) {
+            const rect = modalCanvas.getBoundingClientRect();
+            const scaleX = modalCanvas.width / rect.width;
+            const scaleY = modalCanvas.height / rect.height;
+            if (e.touches && e.touches.length > 0) {
+                return {
+                    x: (e.touches[0].clientX - rect.left) * scaleX,
+                    y: (e.touches[0].clientY - rect.top) * scaleY
+                };
+            }
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const { x, y } = getCoords(e);
+            lastX = x;
+            lastY = y;
+            scratch(e);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            modalCtx.beginPath();
+        }
+
+        function scratch(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            isScratched = true;
+            const { x, y } = getCoords(e);
+            
+            modalCtx.save();
+            modalCtx.globalCompositeOperation = 'destination-out';
+            modalCtx.lineWidth = 90; 
+            modalCtx.lineCap = 'round';
+            modalCtx.lineJoin = 'round';
+            
+            modalCtx.beginPath();
+            modalCtx.moveTo(lastX, lastY);
+            modalCtx.lineTo(x, y);
+            modalCtx.stroke();
+            modalCtx.restore();
+            
+            lastX = x;
+            lastY = y;
+
+            if (activeIndex !== null && !boardData[activeIndex].is1stChecked) {
+                const firstPrizeInput = document.querySelector('.p-text');
+                if (firstPrizeInput && boardData[activeIndex].prize === firstPrizeInput.value.trim()) {
+                    check1stScratchPercent();
+                }
+            }
+        }
+
+        function check1stScratchPercent() {
+            const imgData = modalCtx.getImageData(0, 0, modalCanvas.width, modalCanvas.height);
+            let transparentPixels = 0;
+            for (let i = 3; i < imgData.data.length; i += 16) {
+                if (imgData.data[i] === 0) transparentPixels++;
+            }
+            if (transparentPixels > (imgData.data.length / 16) * 0.12) {
+                boardData[activeIndex].is1stChecked = true;
+                startConfetti();
+            }
+        }
+
+        function startConfetti() {
+            if (confettiActive) return;
+            confettiActive = true;
+            confettiCanvas.style.display = 'block';
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+            confettiParticles = [];
+            const colors = ['#ffd43b', '#ff4757', '#20bf6b', '#2f3542', '#74b9ff', '#ffffff'];
+            for (let i = 0; i < 120; i++) {
+                confettiParticles.push({
+                    x: window.innerWidth / 2 + (Math.random() - 0.5) * 100,
+                    y: window.innerHeight + 20,
+                    size: Math.random() * 8 + 6,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    speedX: (Math.random() - 0.5) * 15,
+                    speedY: -Math.random() * 18 - 12,
+                    gravity: 0.35,
+                    rotation: Math.random() * 360,
+                    rotationSpeed: (Math.random() - 0.5) * 10
+                });
+            }
+            animateConfetti();
+        }
+
+        function animateConfetti() {
+            confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            confettiParticles = confettiParticles.filter(p => p.y < window.innerHeight + 50);
+            confettiParticles.forEach(p => {
+                p.x += p.speedX;
+                p.y += p.speedY;
+                p.speedY += p.gravity;
+                p.rotation += p.rotationSpeed;
+                confettiCtx.save();
+                confettiCtx.translate(p.x, p.y);
+                confettiCtx.rotate(p.rotation * Math.PI / 180);
+                confettiCtx.fillStyle = p.color;
+                confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                confettiCtx.restore();
+            });
+            if (confettiParticles.length > 0 && confettiActive) {
+                confettiAnimationId = requestAnimationFrame(animateConfetti);
+            } else {
+                stopConfetti();
+            }
+        }
+
+        function stopConfetti() {
+            confettiActive = false;
+            if (confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
+            confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            confettiCanvas.style.display = 'none';
+            confettiParticles = [];
+        }
+
+        window.addEventListener('resize', () => {
+            if (confettiActive) {
+                confettiCanvas.width = window.innerWidth;
+                confettiCanvas.height = window.innerHeight;
+            }
+        });
+
+        modalCanvas.addEventListener('mousedown', startDrawing);
+        modalCanvas.addEventListener('mousemove', scratch);
+        modalCanvas.addEventListener('mouseup', stopDrawing);
+        modalCanvas.addEventListener('mouseleave', stopDrawing);
+        modalCanvas.addEventListener('touchstart', startDrawing);
+        modalCanvas.addEventListener('touchmove', scratch, { passive: false });
+        modalCanvas.addEventListener('touchend', stopDrawing);
+
+        window.onload = function() {
+            generateBoard();
+        };
+    </script>
+</body>
+</html>
