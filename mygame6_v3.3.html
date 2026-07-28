@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D 주사위 굴리기(멀티&게이지)</title>
+<style>
+body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f2f5; font-family: sans-serif; margin: 0; user-select: none; -webkit-user-select: none; }
+.config-box { margin-bottom: 15px; font-size: 16px; font-weight: bold; color: #34495e; text-align: center; }
+.config-box label { margin: 0 12px; cursor: pointer; }
+.gauge-container { width: 250px; height: 20px; background-color: #e0e0e0; border-radius: 10px; margin-bottom: 30px; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); position: relative; }
+.gauge-bar { width: 0%; height: 100%; background-color: #3498db; transition: width 0.05s linear, background-color 0.05s linear; will-change: width, background-color; }
+.gauge-text { position: absolute; width: 100%; text-align: center; font-size: 12px; font-weight: bold; color: #2c3e50; line-height: 20px; top: 0; z-index: 2; }
+.dice-container { display: flex; justify-content: center; align-items: center; gap: 60px; min-height: 140px; margin-bottom: 40px; flex-wrap: wrap; }
+.scene { width: 100px; height: 100px; perspective: 600px; }
+.scene.hidden { display: none; }
+.dice { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform; }
+.face { position: absolute; width: 100px; height: 100px; background-color: white; border: 2px solid #ccc; border-radius: 15px; box-sizing: border-box; padding: 10px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); box-shadow: inset 0 0 15px rgba(0,0,0,0.1), 0 5px 10px rgba(0,0,0,0.1); backface-visibility: hidden; }
+.dot { display: block; width: 16px; height: 16px; border-radius: 50%; background-color: #333; align-self: center; justify-self: center; }
+.face-1 .dot { background-color: #e74c3c; width: 24px; height: 24px; }
+.face-1 { transform: rotateY(0deg) translateZ(50px); }
+.face-2 { transform: rotateY(90deg) translateZ(50px); }
+.face-3 { transform: rotateX(90deg) translateZ(50px); }
+.face-4 { transform: rotateX(-90deg) translateZ(50px); }
+.face-5 { transform: rotateY(-90deg) translateZ(50px); }
+.face-6 { transform: rotateY(180deg) translateZ(50px); }
+.face-1 .dot { grid-area: 2 / 2; }
+.face-2 .dot:nth-child(1) { grid-area: 1 / 1; } .face-2 .dot:nth-child(2) { grid-area: 3 / 3; }
+.face-3 .dot:nth-child(1) { grid-area: 1 / 1; } .face-3 .dot:nth-child(2) { grid-area: 2 / 2; } .face-3 .dot:nth-child(3) { grid-area: 3 / 3; }
+.face-4 .dot:nth-child(1) { grid-area: 1 / 1; } .face-4 .dot:nth-child(2) { grid-area: 1 / 3; } .face-4 .dot:nth-child(3) { grid-area: 3 / 1; } .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
+.face-5 .dot:nth-child(1) { grid-area: 1 / 1; } .face-5 .dot:nth-child(2) { grid-area: 1 / 3; } .face-5 .dot:nth-child(3) { grid-area: 2 / 2; } .face-5 .dot:nth-child(4) { grid-area: 3 / 1; } .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+.face-6 .dot:nth-child(1) { grid-area: 1 / 1; } .face-6 .dot:nth-child(2) { grid-area: 1 / 3; } .face-6 .dot:nth-child(3) { grid-area: 2 / 1; } .face-6 .dot:nth-child(4) { grid-area: 2 / 3; } .face-6 .dot:nth-child(5) { grid-area: 3 / 1; } .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
+.result-box { font-size: 22px; font-weight: bold; color: #2c3e50; height: 35px; margin-bottom: 25px; text-align: center; }
+button { padding: 15px 40px; font-size: 18px; font-weight: bold; color: white; background-color: #3498db; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.2s, transform 0.1s; -webkit-tap-highlight-color: transparent; touch-action: none; }
+button:active { transform: scale(0.97); }
+button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
+</style>
+</head>
+<body>
+<div class="config-box">
+  주사위 개수: 
+  <label><input type="radio" name="diceCount" value="1" checked onchange="updateDiceCount()"> 1개</label>
+  <label><input type="radio" name="diceCount" value="2" onchange="updateDiceCount()"> 2개</label>
+  <label><input type="radio" name="diceCount" value="3" onchange="updateDiceCount()"> 3개</label>
+</div>
+<div class="config-box">
+  확률 선택: 
+  <label><input type="radio" name="probabilityMode" value="normal"> 동일모드(1/6)</label>
+  <label><input type="radio" name="probabilityMode" value="gauge" checked> 게이지모드</label>
+</div>
+<div class="gauge-container">
+  <div class="gauge-bar" id="gaugeBar"></div>
+  <div class="gauge-text" id="gaugeText">버튼을 꾹 누르세요! (0%)</div>
+</div>
+<div class="dice-container">
+  <div class="scene" id="scene1">
+    <div class="dice" id="dice1">
+      <div class="face face-1"><span class="dot"></span></div>
+      <div class="face face-2"><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+  </div>
+  <div class="scene hidden" id="scene2">
+    <div class="dice" id="dice2">
+      <div class="face face-1"><span class="dot"></span></div>
+      <div class="face face-2"><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+  </div>
+  <div class="scene hidden" id="scene3">
+    <div class="dice" id="dice3">
+      <div class="face face-1"><span class="dot"></span></div>
+      <div class="face face-2"><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    </div>
+  </div>
+</div>
+<div class="result-box" id="resultText">주사위를 던져보세요!</div>
+<button id="rollBtn">주사위 굴리기</button>
+<script>
+let gaugeValue = 0; let isCharging = false; let gaugeDirection = 1; let lastTimestamp = 0; let animationFrameId = null; let globalAudioCtx = null;
+const rollBtn = document.getElementById('rollBtn'); const gaugeBar = document.getElementById('gaugeBar'); const gaugeText = document.getElementById('gaugeText');
+function updateDiceCount() {
+  const count = parseInt(document.querySelector('input[name="diceCount"]:checked').value);
+  const scene2 = document.getElementById('scene2'); const scene3 = document.getElementById('scene3'); const resultText = document.getElementById('resultText');
+  if (count >= 2) scene2.classList.remove('hidden'); else scene2.classList.add('hidden');
+  if (count === 3) scene3.classList.remove('hidden'); else scene3.classList.add('hidden');
+  resultText.innerText = "주사위를 던져보세요!"; resultText.style.color = "#2c3e50";
+}
+function playDiceSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!globalAudioCtx) { globalAudioCtx = new AudioContext(); }
+    if (globalAudioCtx.state === 'suspended') { globalAudioCtx.resume(); }
+    const now = globalAudioCtx.currentTime; const totalHits = 10;
+    for (let i = 0; i < totalHits; i++) {
+      const progress = i / (totalHits - 1); const timeOffset = 1.1 * Math.pow(progress, 1.8); const hitTime = now + timeOffset;
+      const osc1 = globalAudioCtx.createOscillator(); const osc2 = globalAudioCtx.createOscillator(); const gainNode = globalAudioCtx.createGain();
+      osc1.type = 'triangle'; osc2.type = 'sine';
+      const baseFreq = 140 - (progress * 40) + (Math.random() * 40 - 20);
+      osc1.frequency.setValueAtTime(baseFreq, hitTime); osc1.frequency.exponentialRampToValueAtTime(30, hitTime + 0.07);
+      osc2.frequency.setValueAtTime(baseFreq * 0.8, hitTime); osc2.frequency.exponentialRampToValueAtTime(20, hitTime + 0.07);
+      const currentVolume = 0.4 * (1 - progress * 0.6);
+      gainNode.gain.setValueAtTime(currentVolume, hitTime); gainNode.gain.exponentialRampToValueAtTime(0.001, hitTime + 0.07);
+      osc1.connect(gainNode); osc2.connect(gainNode); gainNode.connect(globalAudioCtx.destination);
+      osc1.start(hitTime); osc2.start(hitTime); osc1.stop(hitTime + 0.07); osc2.stop(hitTime + 0.07);
+    }
+  } catch (e) { console.log("오디오 시스템 제한:", e); }
+}
+function updateGaugeFrame(timestamp) {
+  if (!isCharging) return;
+  if (!lastTimestamp) lastTimestamp = timestamp;
+  const elapsed = timestamp - lastTimestamp;
+  if (elapsed >= 16) {
+    gaugeValue += gaugeDirection * (elapsed * 0.2);
+    lastTimestamp = timestamp;
+    if (gaugeValue >= 100) { gaugeValue = 100; gaugeDirection = -1; }
+    else if (gaugeValue <= 0) { gaugeValue = 0; gaugeDirection = 1; }
+    gaugeBar.style.width = `${gaugeValue}%`;
+    gaugeText.innerText = `게이지 : ${Math.floor(gaugeValue)}%`;
+    let gaugeColor = "#3498db";
+    if (gaugeValue > 0 && gaugeValue <= 25) {
+      const r = Math.floor(52 + (46 - 52) * (gaugeValue / 25)); const g = Math.floor(152 + (204 - 152) * (gaugeValue / 25)); const b = Math.floor(219 + (113 - 219) * (gaugeValue / 25));
+      gaugeColor = `rgb(${r}, ${g}, ${b})`;
+    } else if (gaugeValue > 25 && gaugeValue <= 50) {
+      const ratio = (gaugeValue - 25) / 25;
+      const r = Math.floor(46 + (241 - 46) * ratio); const g = Math.floor(204 + (196 - 204) * ratio); const b = Math.floor(113 + (15 - 113) * ratio);
+      gaugeColor = `rgb(${r}, ${g}, ${b})`;
+    } else if (gaugeValue > 50 && gaugeValue <= 75) {
+      const ratio = (gaugeValue - 50) / 25;
+      const r = Math.floor(241 + (230 - 241) * ratio); const g = Math.floor(196 + (126 - 196) * ratio); const b = Math.floor(15 + (34 - 15) * ratio);
+      gaugeColor = `rgb(${r}, ${g}, ${b})`;
+    } else if (gaugeValue > 75 && gaugeValue <= 100) {
+      const ratio = (gaugeValue - 75) / 25;
+      const r = Math.floor(230 + (231 - 230) * ratio); const g = Math.floor(126 + (76 - 126) * ratio); const b = Math.floor(34 + (60 - 34) * ratio);
+      gaugeColor = `rgb(${r}, ${g}, ${b})`;
+    }
+    gaugeBar.style.backgroundColor = gaugeColor;
+  }
+  animationFrameId = requestAnimationFrame(updateGaugeFrame);
+}
+function startCharging() {
+  if (rollBtn.disabled || isCharging) return;
+  isCharging = true; gaugeValue = 0; gaugeDirection = 1; lastTimestamp = 0;
+  rollBtn.innerText = "주사위 굴리기"; rollBtn.style.backgroundColor = "#e67e22";
+  animationFrameId = requestAnimationFrame(updateGaugeFrame);
+}
+function stopCharging() {
+  if (!isCharging) return;
+  isCharging = false; cancelAnimationFrame(animationFrameId);
+  rollBtn.disabled = true; rollBtn.innerText = "주사위 던짐!"; rollBtn.style.backgroundColor = "#bdc3c7";
+  rollAllDice(Math.floor(gaugeValue));
+}
+function cancelCharging() {
+  if (!isCharging) return;
+  isCharging = false; cancelAnimationFrame(animationFrameId);
+  gaugeValue = 0; gaugeBar.style.width = '0%'; gaugeBar.style.backgroundColor = '#3498db';
+  gaugeText.innerText = "버튼을 꾹 누르세요! (0%)"; rollBtn.innerText = "주사위 굴리기"; rollBtn.style.backgroundColor = "#3498db";
+}
+rollBtn.addEventListener('mousedown', startCharging); rollBtn.addEventListener('mouseup', stopCharging); rollBtn.addEventListener('mouseleave', cancelCharging);
+rollBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startCharging(); }); rollBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopCharging(); });
+function getTargetAngles(result) {
+  let targetX = 0, targetY = 0, targetZ = 0;
+  switch (result) {
+    case 1: targetX = 0; targetY = 0; targetZ = 0; break;
+    case 2: targetX = 0; targetY = -90; targetZ = 0; break;
+    case 3: targetX = -90; targetY = 0; targetZ = 0; break;
+    case 4: targetX = 90; targetY = 0; targetZ = 0; break;
+    case 5: targetX = 0; targetY = 90; targetZ = 0; break;
+    case 6: targetX = 0; targetY = 180; targetZ = 0; break;
+  }
+  return { targetX, targetY, targetZ };
+}
+function animateDice(diceId, result, currentPower) {
+  const dice = document.getElementById(diceId); const target = getTargetAngles(result);
+  dice.style.transition = 'none'; dice.style.transform = 'rotateZ(0deg) rotateX(0deg) rotateY(0deg)'; void dice.offsetHeight;
+  let loops = 2; let duration = 1.6;
+  if (currentPower <= 5) { loops = 2; duration = 1.6; }
+  else if (currentPower > 5 && currentPower <= 10) { loops = 3; duration = 1.55; }
+  else if (currentPower > 10 && currentPower < 100) {
+    const ratio = (currentPower - 11) / 88;
+    loops = 4 + Math.floor(ratio * 6); duration = 1.5 - (ratio * 0.25);
+  } else if (currentPower === 100) { loops = 12; duration = 1.2; }
+  dice.style.transition = `transform ${duration}s cubic-bezier(0.25, 1, 0.5, 1)`;
+  const fixedSpins = loops * 360; const finalX = target.targetX + fixedSpins; const finalY = target.targetY + fixedSpins; const randomZTilt = target.targetZ + (Math.random() * 60 - 30);
+  dice.style.transform = `rotateZ(${randomZTilt}deg) rotateX(${finalX}deg) rotateY(${finalY}deg)`;
+}
+function getFinalDiceResult(gauge) {
+  const mode = document.querySelector('input[name="probabilityMode"]:checked').value;
+  if (mode === 'normal') { return Math.floor(Math.random() * 6) + 1; }
+  let targetDice = 1.5 + (gauge / 100) * 4; let weights = []; let totalWeight = 0; let precision = 2.3;
+  for (let i = 1; i <= 6; i++) {
+    let distance = i - targetDice; let w = Math.exp(-(distance * distance) / (2 * precision * precision)); w += 0.05; weights.push(w); totalWeight += w;
+  }
+  let randomValue = Math.random() * totalWeight; let currentSum = 0;
+  for (let i = 0; i < weights.length; i++) {
+    currentSum += weights[i]; if (randomValue <= currentSum) { return i + 1; }
+  }
+  return 6;
+}
+function rollAllDice(finalPower) {
+  const resultText = document.getElementById('resultText'); const count = parseInt(document.querySelector('input[name="diceCount"]:checked').value);
+  rollBtn.disabled = true; rollBtn.innerText = "주사위 던짐!"; rollBtn.style.backgroundColor = "#bdc3c7";
+  resultText.innerText = `데굴데굴....`; resultText.style.color = "#e67e22";
+  playDiceSound();
+  const res1 = getFinalDiceResult(finalPower); animateDice('dice1', res1, finalPower);
+  let res2 = 0; if (count >= 2) { res2 = getFinalDiceResult(finalPower); animateDice('dice2', res2, finalPower); }
+  let res3 = 0; if (count === 3) { res3 = getFinalDiceResult(finalPower); animateDice('dice3', res3, finalPower); }
+  let duration = 1.6;
+  if (finalPower > 5 && finalPower <= 10) duration = 1.55;
+  else if (finalPower > 10 && finalPower < 100) duration = 1.5 - (((finalPower - 11) / 88) * 0.25);
+  else if (finalPower === 100) duration = 1.2;
+  setTimeout(() => {
+    if (count === 1) { resultText.innerText = `🎲 결과: ${res1}`; }
+    else if (count === 2) { resultText.innerText = `🎲 결과: ${res1} + ${res2} = 합계 ${res1 + res2}`; }
+    else { resultText.innerText = `🎲 결과: ${res1} + ${res2} + ${res3} = 합계 ${res1 + res2 + res3}`; }
+    resultText.style.color = "#2e7d32"; rollBtn.disabled = false; rollBtn.innerText = "주사위 굴리기"; rollBtn.style.backgroundColor = "#3498db";
+    gaugeBar.style.width = '0%'; gaugeBar.style.backgroundColor = '#3498db'; gaugeText.innerText = "버튼을 꾹 누르세요! (0%)";
+  }, (duration * 1000) + 50);
+}
+</script>
+</body>
+</html>
