@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>라스베가스_v4</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f0f2f5;
+      font-family: sans-serif;
+      margin: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      padding: 20px;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .global-lock-layer {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: transparent;
+      z-index: 9999;
+      cursor: not-allowed;
+    }
+    .global-lock-layer.active {
+      display: block;
+    }
+    .setup-screen {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 480px;
+      box-sizing: border-box;
+    }
+    .summary-screen {
+      display: none;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      width: 100%;
+      max-width: 600px;
+      box-sizing: border-box;
+      flex-direction: column;
+      align-items: center;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      text-align: center;
+    }
+    .summary-table th, .summary-table td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 6px;
+    }
+    .summary-table th {
+      background-color: #f1f5f9;
+      color: #334155;
+      font-weight: bold;
+    }
+    .summary-table tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    .setup-title {
+      font-size: 22px;
+      font-weight: bold;
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 25px;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+    .setup-group {
+      margin-bottom: 18px;
+    }
+    .setup-group label {
+      display: block;
+      font-weight: bold;
+      color: #34495e;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+    .color-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8f9fa;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .color-row span {
+      font-size: 14px;
+      font-weight: bold;
+      color: #4a5568;
+    }
+    .start-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      background-color: #2ecc71;
+      margin-top: 15px;
+    }
+    .start-btn:hover { background-color: #27ae60; }
+    
+    .game-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .turn-badge {
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      background-color: #9b59b6;
+      padding: 8px 25px;
+      border-radius: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 10px rgba(155, 89, 182, 0.3);
+    }
+    .config-box {
+      margin-top: 12px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #34495e;
+      text-align: center;
+      background: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .select-style {
+      padding: 4px 8px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 5px;
+      border: 2px solid #bdc3c7;
+      color: #2c3e50;
+    }
+    .dice-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      min-height: 160px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      max-width: 600px;
+    }
+    .scene {
+      width: 60px;
+      height: 60px;
+      perspective: 600px;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .scene.hidden { display: none; }
+    .scene.selected { transform: translateY(-15px) scale(1.05); }
+
+    @keyframes tossEffect {
+      0% { transform: translateY(0) scale(1); }
+      20% { transform: translateY(-80px) scale(1.1); }
+      45% { transform: translateY(0) scale(1); }
+      65% { transform: translateY(-35px) scale(1.05); }
+      80% { transform: translateY(0) scale(1); }
+      90% { transform: translateY(-10px) scale(1.02); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    @keyframes floorShake {
+      0%, 100% { margin-top: 0; }
+      45% { margin-top: 4px; }
+      48% { margin-top: -2px; }
+      80% { margin-top: 1px; }
+    }
+    .dice {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+      will-change: transform;
+    }
+    .face {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border: 1.5px solid rgba(0, 0, 0, 0.15);
+      border-radius: 9px;
+      box-sizing: border-box;
+      padding: 5px;
+      display: grid;
+      grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.08), 0 3px 6px rgba(0,0,0,0.1);
+      backface-visibility: hidden;
+      transition: background-color 0.3s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .dot {
+      display: block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      align-self: center;
+      justify-self: center;
+    }
+    .dice-normal .face { background-color: #ffffff; }
+    .dice-normal .dot { background-color: #333333; }
+    .dice-normal .face-1 .dot { background-color: #e74c3c; width: 15px; height: 15px; }
+
+    .dice-hidden .face { background-color: #1e272e !important; border-color: #34495e; }
+    .dice-hidden .dot { background-color: #ffffff !important; }
+    .dice-hidden .face-1 .dot { background-color: #ff3f34 !important; width: 15px; height: 15px; }
+
+    .face-1 { transform: rotateY(0deg) translateZ(30px); }
+    .face-2 { transform: rotateY(90deg) translateZ(30px); }
+    .face-3 { transform: rotateX(90deg) translateZ(30px); }
+    .face-4 { transform: rotateX(-90deg) translateZ(30px); }
+    .face-5 { transform: rotateY(-90deg) translateZ(30px); }
+    .face-6 { transform: rotateY(180deg) translateZ(30px); }
+    
+    .face-1 .dot { grid-area: 2 / 2; }
+    .face-2 .dot:nth-child(1) { grid-area: 1 / 1; }
+    .face-2 .dot:nth-child(2) { grid-area: 3 / 3; }
+    .face-3 .dot:nth-child(1) { grid-area: 1 / 1; }
+    .face-3 .dot:nth-child(2) { grid-area: 2 / 2; }
+    .face-3 .dot:nth-child(3) { grid-area: 3 / 3; }
+    .face-4 .dot:nth-child(1) { grid-area: 1 / 1; }
+    .face-4 .dot:nth-child(2) { grid-area: 1 / 3; }
+    .face-4 .dot:nth-child(3) { grid-area: 3 / 1; }
+    .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
+    .face-5 .dot:nth-child(1) { grid-area: 1 / 1; }
+    .face-5 .dot:nth-child(2) { grid-area: 1 / 3; }
+    .face-5 .dot:nth-child(3) { grid-area: 2 / 2; }
+    .face-5 .dot:nth-child(4) { grid-area: 3 / 1; }
+    .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+    .face-6 .dot:nth-child(1) { grid-area: 1 / 1; }
+    .face-6 .dot:nth-child(2) { grid-area: 1 / 3; }
+    .face-6 .dot:nth-child(3) { grid-area: 2 / 1; }
+    .face-6 .dot:nth-child(4) { grid-area: 2 / 3; }
+    .face-6 .dot:nth-child(5) { grid-area: 3 / 1; }
+    .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
+    
+    .result-box {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2c3e50;
+      min-height: 45px;
+      text-align: center;
+      margin-top: 10px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      padding: 11px 20px;     /* 기존 12px 22px에서 90% 수준으로 소폭 축소 */
+      font-size: 13.5px;      /* 기존 15px에서 90% 수준으로 조정 (눈에 잘 띄는 크기) */
+      font-weight: bold;
+      color: white;
+      background-color: #3498db;
+      border: none;
+      border-radius: 7px;     /* 90% 비율에 맞춘 모서리 반경 */
+      cursor: pointer;
+      box-shadow: 0 3.5px 5.5px rgba(0,0,0,0.1); 
+      transition: background 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
+    
+    .submit-btn { background-color: #2ecc71; }
+    .submit-btn:hover { background-color: #27ae60; }
+    .undo-btn { background-color: #e74c3c; }
+    .undo-btn:hover { background-color: #c0392b; }
+    
+    .history-box {
+      width: 100%;
+      max-width: 450px;
+      margin-top: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      font-size: 15px;
+      color: #2c3e50;
+      line-height: 1.6;
+    }
+    .history-title {
+      font-weight: bold;
+      border-bottom: 2px solid #ecf0f1;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+      color: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-screen" id="setupScreen">
+    <div class="setup-title">🎲 초기 설정 패널</div>
+    
+    <div class="setup-group">
+      <label>참가 인원 설정</label>
+      <select id="setupPlayerCount" class="select-style" style="width:100%; padding:8px;" onchange="renderSetupColorGrid()">
+        <option value="1">1명</option>
+        <option value="2">2명</option>
+        <option value="3">3명</option>
+        <option value="4">4명</option>
+        <option value="5">5명</option>
+        <option value="6" selected>6명</option>
+      </select>
+    </div>
+
+    <div class="setup-group">
+      <label>초기 주사위 묶음 수량 지정</label>
+      <div style="display:flex; gap:15px;">
+        <div style="flex:1;">
+          <span style="font-size:13px; color:#555;">일반 주사위</span>
+          <select id="setupNormalCount" class="select-style" style="width:100%; margin-top:4px;">
+            <option value="1">1개</option><option value="2">2개</option><option value="3">3개</option>
+            <option value="4">4개</option><option value="5" selected>5개</option><option value="6">6개</option>
+            <option value="7">7개</option><option value="8">8개</option><option value="9">9개</option>
+            <option value="10">10개</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <span style="font-size:13px; color:#555;">히든 주사위</span>
+          <select id="setupHiddenCount" class="select-style" style="width:100%; margin-top:4px;">
+            <option value="0">없음</option><option value="1" selected>1개</option><option value="2">2개</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-group">
+      <label>플레이어별 고유 일반 주사위 색상 매칭</label>
+      <div class="color-picker-grid" id="setupColorGrid">
+        <!-- 자바스크립트 동적 영역 -->
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="launchGameEngine()">게임 시작</button>
+  </div>
+
+  <div class="global-lock-layer" id="globalLockLayer"></div>
+
+  <div class="game-screen" id="gameScreen">
+    <div class="turn-badge" id="playerTurnBadge">1번 플레이어 (1차 던지기)</div>
+    <div class="dice-container" id="diceContainer"></div>
+    <div class="result-box" id="resultText">주사위를 던져보세요!</div>
+    <div class="btn-group">
+      <button id="undoBtn" class="undo-btn" disabled>되돌리기</button>
+      <button id="rollBtn">주사위 굴리기</button>
+      <button id="submitBtn" class="submit-btn" disabled>주사위 제출</button>
+    </div>
+    <div class="history-box">
+      <div class="history-title">📊 실시간 주사위 누적 집계표</div>
+      <div id="historyLog" style="width:100%;"></div>
+    </div>
+  </div>
+
+  <div class="summary-screen" id="summaryScreen">
+    <div class="setup-title" style="border-bottom-color:#e67e22;">📊 최종 주사위 눈금 집계표</div>
+    <div id="summaryTableContainer" style="width:100%;"></div>
+    <button class="start-btn" style="background-color:#34495e;" onclick="window.location.reload();">새 게임 시작하기</button>
+  </div>
+
+  <script>
+    let isRolling = false;
+    let hasRolledThisTurn = false; 
+    let isRollButtonHardLocked = false; 
+    
+    let globalAudioCtx = null;
+    let totalPlayers = 6;
+    let currentPlayerIndex = 0;
+    let playerData = [];
+    let undoStack = null;
+    let globalMatchLogs = []; 
+
+    const setupScreen = document.getElementById('setupScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const summaryScreen = document.getElementById('summaryScreen');
+    const rollBtn = document.getElementById('rollBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const lockLayer = document.getElementById('globalLockLayer');
+    const container = document.getElementById('diceContainer');
+    const historyLog = document.getElementById('historyLog');
+    const turnBadge = document.getElementById('playerTurnBadge');
+
+    const defaultColorPresets = ["#ffffff", "#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#3498db"];
+
+    function renderSetupColorGrid() {
+      const count = parseInt(document.getElementById('setupPlayerCount').value);
+      const grid = document.getElementById('setupColorGrid');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+        const row = document.createElement('div');
+        row.className = 'color-row';
+        const label = document.createElement('span');
+        label.innerText = `${i + 1}번 플레이어`;
+        const select = document.createElement('select');
+        select.className = 'select-style';
+        select.id = `setupColor_P${i}`;
+
+        const options = [
+          { name: "흰색", val: "#ffffff" }, { name: "빨간색", val: "#e74c3c" },
+          { name: "주황색", val: "#e67e22" }, { name: "노란색", val: "#f1c40f" },
+          { name: "초록색", val: "#2ecc71" }, { name: "파란색", val: "#3498db" },
+          { name: "보라색", val: "#9b59b6" }
+        ];
+
+        options.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt.val; o.innerText = opt.name;
+          if (opt.val === defaultColorPresets[i % defaultColorPresets.length]) o.selected = true;
+          select.appendChild(o);
+        });
+        row.appendChild(label); row.appendChild(select); grid.appendChild(row);
+      }
+    }
+    function launchGameEngine() {
+      totalPlayers = parseInt(document.getElementById('setupPlayerCount').value);
+      const initNormal = parseInt(document.getElementById('setupNormalCount').value);
+      const initHidden = parseInt(document.getElementById('setupHiddenCount').value);
+
+      playerData = [];
+      globalMatchLogs = []; 
+      for (let i = 0; i < totalPlayers; i++) {
+        const selectedColor = document.getElementById(`setupColor_P${i}`).value;
+        playerData.push({
+          normalCount: initNormal, hiddenCount: initHidden,
+          diceColor: selectedColor, round: 1
+        });
+      }
+      currentPlayerIndex = 0; undoStack = null;
+      hasRolledThisTurn = false; 
+      isRollButtonHardLocked = false; 
+
+      setupScreen.style.display = 'none'; gameScreen.style.display = 'flex';
+      syncDiceLayoutByMemory();
+      renderLiveSummaryTable(); // 게임 시작 시점에 첫 실시간 표 생성
+    }
+
+    function getDotCountByFaceIndex(faceIndex) {
+      if (faceIndex === 0) return 1;
+      if (faceIndex === 1) return 2;
+      if (faceIndex === 2) return 3;
+      if (faceIndex === 3) return 4;
+      if (faceIndex === 4) return 5;
+      if (faceIndex === 5) return 6;
+      return 0;
+    }
+
+    function createDiceDOM(id, type) {
+      const scene = document.createElement('div');
+      scene.className = 'scene'; scene.id = `scene_${id}`;
+      const dice = document.createElement('div');
+      dice.className = `dice ${type === 'hidden' ? 'dice-hidden' : 'dice-normal'}`;
+      dice.id = `dice_${id}`; dice.dataset.type = type; dice.dataset.value = "1";
+
+      for (let i = 0; i < 6; i++) {
+        const face = document.createElement('div');
+        face.className = `face face-${i + 1}`;
+        const dotCount = getDotCountByFaceIndex(i);
+        for (let j = 0; j < dotCount; j++) {
+          const dot = document.createElement('span');
+          dot.className = 'dot'; face.appendChild(dot);
+        }
+        dice.appendChild(face);
+      }
+      scene.appendChild(dice);
+
+      scene.addEventListener('click', () => {
+        if (isRolling || !hasRolledThisTurn) return; 
+        scene.classList.toggle('selected');
+        applyDynamicNeonEffect(scene);
+        updateSubmitButtonState();
+      });
+      return scene;
+    }
+
+    function applyDynamicNeonEffect(sceneEl) {
+      const dice = sceneEl.querySelector('.dice');
+      const faces = sceneEl.querySelectorAll('.face');
+      if (!sceneEl.classList.contains('selected')) { changeAllDiceColor(); return; }
+
+      if (dice.classList.contains('dice-hidden')) {
+        faces.forEach(f => {
+          f.style.borderColor = '#00ffff';
+          f.style.boxShadow = '0 0 15px #00ffff, 0 0 30px #00ffff, inset 0 0 12px rgba(0, 255, 255, 0.2)';
+        });
+      } else {
+        let color = playerData[currentPlayerIndex].diceColor;
+        if (color === '#ffffff') color = '#00d2ff';
+        faces.forEach(f => {
+          f.style.borderColor = color;
+          f.style.boxShadow = `0 0 15px ${color}, 0 0 30px ${color}, inset 0 0 12px rgba(255, 255, 255, 0.2)`;
+        });
+      }
+    }
+
+    function updateSubmitButtonState() {
+      if (isRolling || !hasRolledThisTurn) { submitBtn.disabled = true; return; }
+      submitBtn.disabled = container.querySelectorAll('.scene.selected').length === 0;
+    }
+
+    function syncDiceLayoutByMemory() {
+      container.innerHTML = '';
+      const data = playerData[currentPlayerIndex];
+
+      for (let i = 1; i <= data.normalCount; i++) {
+        container.appendChild(createDiceDOM(`n_${i}`, 'normal'));
+      }
+      for (let i = 1; i <= data.hiddenCount; i++) {
+        container.appendChild(createDiceDOM(`h_${i}`, 'hidden'));
+      }
+
+      const allScenes = container.querySelectorAll('.scene');
+      allScenes.forEach(sc => {
+        sc.classList.remove('selected');
+        const faces = sc.querySelectorAll('.face');
+        faces.forEach(f => {
+          f.style.borderColor = ''; f.style.boxShadow = '';
+        });
+      });
+
+      changeAllDiceColor();
+      updateSubmitButtonState();
+      
+      turnBadge.innerText = `${currentPlayerIndex + 1}번 플레이어 (${data.round}차)`;
+      turnBadge.style.backgroundColor = getPlayerBadgeColor(currentPlayerIndex);
+      
+      if (isRollButtonHardLocked) {
+        rollBtn.disabled = true;
+        rollBtn.innerText = "제출 후 재활성화";
+        rollBtn.style.backgroundColor = "#bdc3c7";
+      } else {
+        rollBtn.disabled = isRolling;
+        rollBtn.innerText = "주사위 굴리기";
+        rollBtn.style.backgroundColor = isRolling ? "#bdc3c7" : "#3498db";
+      }
+
+      undoBtn.disabled = isRolling ? true : (undoStack === null);
+    }
+    function getPlayerBadgeColor(index) {
+      const colors = ["#9b59b6", "#34495e", "#16a085", "#27ae60", "#2c3e50", "#c0392b"];
+      return colors[index % colors.length];
+    }
+
+    function changeAllDiceColor() {
+      const normalColor = playerData[currentPlayerIndex].diceColor;
+      const allScenes = container.querySelectorAll('.scene');
+      
+      allScenes.forEach(scene => {
+        const dice = scene.querySelector('.dice');
+        const isSelected = scene.classList.contains('selected');
+        const faces = scene.querySelectorAll('.face');
+        const isHidden = dice.classList.contains('dice-hidden');
+        
+        faces.forEach(face => {
+          if (isHidden) { face.style.backgroundColor = '#1e272e'; } 
+          else { face.style.backgroundColor = normalColor; }
+          
+          if (!isSelected) {
+            face.style.borderColor = isHidden ? '#34495e' : 'rgba(0, 0, 0, 0.15)';
+            face.style.boxShadow = 'inset 0 0 10px rgba(0,0,0,0.08), 0 3px 6px rgba(0,0,0,0.1)';
+          }
+          
+          const dots = face.querySelectorAll('.dot');
+          if (isHidden) {
+            dots.forEach(dot => {
+              if (face.classList.contains('face-1')) dot.style.backgroundColor = '#ff3f34';
+              else dot.style.backgroundColor = '#ffffff';
+            });
+          } else {
+            const isWhite = normalColor === '#ffffff' || normalColor === '#f1c40f';
+            const isRedDice = normalColor === '#e74c3c';
+            dots.forEach(dot => {
+              if (face.classList.contains('face-1')) {
+                dot.style.backgroundColor = isRedDice ? '#ffffff' : '#e74c3c';
+              } else {
+                dot.style.backgroundColor = isWhite ? '#333333' : '#ffffff';
+              }
+            });
+          }
+        });
+        if (isSelected) applyDynamicNeonEffect(scene);
+      });
+
+      if (isRollButtonHardLocked) {
+        rollBtn.disabled = true;
+        rollBtn.innerText = "제출 후 재활성화";
+        rollBtn.style.backgroundColor = "#bdc3c7";
+      }
+    }
+
+    function playDiceSound() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!globalAudioCtx) globalAudioCtx = new AudioContext();
+        if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+        const now = globalAudioCtx.currentTime;
+        const totalHits = 12;
+
+        for (let i = 0; i < totalHits; i++) {
+          const progress = i / (totalHits - 1);
+          const hitTime = now + (1.1 * Math.pow(progress, 1.8));
+          const osc1 = globalAudioCtx.createOscillator();
+          const osc2 = globalAudioCtx.createOscillator();
+          const gainNode = globalAudioCtx.createGain();
+
+          osc1.type = 'triangle'; osc2.type = 'sine';
+          const baseFreq = 150 - (progress * 45) + (Math.random() * 40 - 20);
+          osc1.frequency.setValueAtTime(baseFreq, hitTime);
+          osc1.frequency.exponentialRampToValueAtTime(30, hitTime + 0.06);
+          osc2.frequency.setValueAtTime(baseFreq * 0.8, hitTime);
+          osc2.frequency.exponentialRampToValueAtTime(20, hitTime + 0.06);
+
+          gainNode.gain.setValueAtTime(0.35 * (1 - progress * 0.5), hitTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, hitTime + 0.06);
+          osc1.connect(gainNode); osc2.connect(gainNode); gainNode.connect(globalAudioCtx.destination);
+          osc1.start(hitTime); osc2.start(hitTime);
+        }
+      } catch (e) { console.log(e); }
+    }
+
+    function getTargetAngles(result) {
+      let targetX = 0, targetY = 0, targetZ = 0;
+      switch (result) {
+        case 1: targetX = 0; targetY = 0; targetZ = 0; break;
+        case 2: targetX = 0; targetY = -90; targetZ = 0; break;
+        case 3: targetX = -90; targetY = 0; targetZ = 0; break;
+        case 4: targetX = 90; targetY = 0; targetZ = 0; break;
+        case 5: targetX = 0; targetY = 90; targetZ = 0; break;
+        case 6: targetX = 0; targetY = 180; targetZ = 0; break;
+      }
+      return { targetX, targetY, targetZ };
+    }
+
+    function animateDice(diceId, result) {
+      const dice = document.getElementById(diceId);
+      const scene = dice.parentElement;
+      const target = getTargetAngles(result);
+      dice.style.transition = 'none';
+      dice.style.transform = 'rotateZ(0deg) rotateX(0deg) rotateY(0deg)';
+      scene.style.animation = 'none';
+      
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const loops = 4; const duration = 1.4;
+          const randomExtraSpinsX = Math.floor(Math.random() * 3) * 360; 
+          const randomExtraSpinsY = Math.floor(Math.random() * 3) * 360; 
+          const randomTimeOffset = (Math.random() * 0.3) - 0.15;         
+          const finalDuration = Math.max(0.8, duration + randomTimeOffset); 
+          
+          dice.style.transition = `transform ${finalDuration}s cubic-bezier(0.1, 0.8, 0.3, 1)`;
+          const finalX = target.targetX + (loops * 360) + randomExtraSpinsX;
+          const finalY = target.targetY + (loops * 360) + randomExtraSpinsY;
+          const randomZTilt = target.targetZ + (Math.random() * 60 - 30);
+          
+          dice.style.transform = `rotateZ(${randomZTilt}deg) rotateX(${finalX}deg) rotateY(${finalY}deg)`;
+          scene.style.animation = `tossEffect ${finalDuration}s ease-out forwards, floorShake ${finalDuration}s ease-out forwards`;
+        });
+      });
+    }
+
+    function rollAllDice() {
+      if (isRolling) return;
+      const dices = container.querySelectorAll('.dice');
+      if (dices.length === 0) return;
+      
+      isRolling = true;
+      hasRolledThisTurn = false;
+      isRollButtonHardLocked = true; 
+      
+      const resultText = document.getElementById('resultText');
+      lockLayer.classList.add('active'); 
+
+      container.querySelectorAll('.scene.selected').forEach(s => s.classList.remove('selected'));
+      rollBtn.disabled = true; submitBtn.disabled = true; undoBtn.disabled = true;
+      rollBtn.innerText = "주사위 던짐!"; rollBtn.style.backgroundColor = "#bdc3c7";
+      resultText.innerText = `데굴데굴....`; resultText.style.color = "#e67e22";
+
+      playDiceSound();
+      let normalResults = []; let hiddenResults = [];
+
+      dices.forEach(dice => {
+        const res = Math.floor(Math.random() * 6) + 1;
+        dice.dataset.value = res.toString();
+        if (dice.dataset.type === 'hidden') hiddenResults.push(res);
+        else normalResults.push(res);
+        animateDice(dice.id, res);
+      });
+      setTimeout(() => {
+        let output = `일반 [ ${normalResults.join(', ')} ]`;
+        if (hiddenResults.length > 0) output += `<br><span style="color: #d63031; font-size:18px;">★히든 [ ${hiddenResults.join(', ')} ]</span>`;
+        else output = `🎲 결과: ` + output;
+
+        resultText.innerHTML = output; resultText.style.color = "#2e7d32";
+        
+        isRolling = false;
+        hasRolledThisTurn = true; 
+        isRollButtonHardLocked = true; 
+        
+        lockLayer.classList.remove('active'); 
+        
+        rollBtn.disabled = true;
+        rollBtn.innerText = "제출 후 재활성화";
+        rollBtn.style.backgroundColor = "#bdc3c7";
+        
+        updateSubmitButtonState();
+        undoBtn.disabled = (undoStack === null);
+      }, 1600);
+    }
+
+    function renderLiveSummaryTable() {
+      let html = `<table class="summary-table" style="margin-top:0; margin-bottom:0;">`;
+      html += `<thead><tr><th>플레이어</th><th>⚀ 1</th><th>⚁ 2</th><th>⚂ 3</th><th>⚃ 4</th><th>⚄ 5</th><th>⚅ 6</th></tr></thead><tbody>`;
+
+      // 1. 일반 플레이어 라인 생성
+      for (let p = 1; p <= totalPlayers; p++) {
+        let counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        globalMatchLogs.forEach(log => {
+          if (log.playerNum === p && log.type === 'normal' && counts[log.diceValue] !== undefined) {
+            counts[log.diceValue]++;
+          }
+        });
+
+        // 사용자가 선택한 주사위 색상 매칭 (흰색은 검은색 계열로 보정)
+        let configColor = document.getElementById(`setupColor_P${p-1}`) ? document.getElementById(`setupColor_P${p-1}`).value : '#333333';
+        if (configColor === '#ffffff') configColor = '#333333';
+
+        html += `<tr>`;
+        html += `<td style="font-weight:bold; color:${configColor}">${p}번 플레이어</td>`;
+        for (let num = 1; num <= 6; num++) {
+          html += `<td>${counts[num]}</td>`;
+        }
+        html += `</tr>`;
+      }
+
+      // 2. 통합 히든 주사위 전용 독립 행 생성 (맨 아래 배치)
+      let hiddenCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+      globalMatchLogs.forEach(log => {
+        if (log.type === 'hidden' && hiddenCounts[log.diceValue] !== undefined) {
+          hiddenCounts[log.diceValue]++;
+        }
+      });
+
+      html += `<tr style="background-color: #1e272e; color: #ffffff; font-weight: bold;">`;
+      html += `<td style="color: #ffffff;">★ 히든 주사위</td>`;
+      for (let num = 1; num <= 6; num++) {
+        html += `<td style="color: #ffffff;">${hiddenCounts[num]}</td>`;
+      }
+      html += `</tr>`;
+
+      html += `</tbody></table>`;
+      historyLog.innerHTML = html;
+    }
+
+    function submitAndPassTurn() {
+      if (isRolling || !hasRolledThisTurn) return; 
+      const selectedScenes = container.querySelectorAll('.scene.selected');
+      if (selectedScenes.length === 0) return;
+
+      const data = playerData[currentPlayerIndex];
+      let submittedNormalCount = 0; let submittedHiddenCount = 0;
+
+      // 주사위 정보 임시 저장 배열
+      let stepLogs = [];
+
+      selectedScenes.forEach(scene => {
+        const dice = scene.querySelector('.dice');
+        const val = parseInt(dice.dataset.value, 10);
+        const type = dice.dataset.type;
+
+        if (type === 'hidden') submittedHiddenCount++;
+        else submittedNormalCount++;
+
+        stepLogs.push({
+          playerNum: currentPlayerIndex + 1,
+          diceValue: val,
+          type: type
+        });
+      });
+
+      // 백업 생성 (이전 로그 길이 보관)
+      undoStack = {
+        playerIndex: currentPlayerIndex, normalCount: data.normalCount,
+        hiddenCount: data.hiddenCount, round: data.round,
+        logLengthBefore: globalMatchLogs.length
+      };
+
+      // 글로벌 로그에 최종 합산
+      globalMatchLogs = globalMatchLogs.concat(stepLogs);
+      
+      data.round++;
+      data.normalCount = Math.max(0, data.normalCount - submittedNormalCount);
+      data.hiddenCount = Math.max(0, data.hiddenCount - submittedHiddenCount);
+
+      // 실시간 집계 테이블 즉시 새로고침 반영
+      renderLiveSummaryTable();
+
+      let totalRemainingDice = 0;
+      playerData.forEach(p => {
+        totalRemainingDice += p.normalCount + p.hiddenCount;
+      });
+
+      if (totalRemainingDice === 0) {
+        lockLayer.classList.remove('active'); 
+        showFinalMatchSummaryTable();
+        return;
+      }
+
+      let foundNextPlayer = false; let checkIndex = currentPlayerIndex;
+      for (let i = 0; i < totalPlayers; i++) {
+        checkIndex = (checkIndex + 1) % totalPlayers;
+        const nextData = playerData[checkIndex];
+        if (nextData.normalCount > 0 || nextData.hiddenCount > 0) {
+          currentPlayerIndex = checkIndex; foundNextPlayer = true; break;
+        }
+      }
+      if (!foundNextPlayer) currentPlayerIndex = (currentPlayerIndex + 1) % totalPlayers;
+
+      isRollButtonHardLocked = false;
+      hasRolledThisTurn = false;
+
+      document.getElementById('resultText').innerText = "주사위를 던져보세요!";
+      document.getElementById('resultText').style.color = "#2c3e50";
+      syncDiceLayoutByMemory();
+    }
+    function showFinalMatchSummaryTable() {
+      gameScreen.style.display = 'none';
+      summaryScreen.style.display = 'flex';
+
+      let html = `<table class="summary-table">`;
+      html += `<thead><tr><th>플레이어</th><th>⚀ 1</th><th>⚁ 2</th><th>⚂ 3</th><th>⚃ 4</th><th>⚄ 5</th><th>⚅ 6</th></tr></thead><tbody>`;
+
+      // 1. 최종 화면 - 일반 플레이어 결과 출력
+      for (let p = 1; p <= totalPlayers; p++) {
+        let counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        globalMatchLogs.forEach(log => {
+          if (log.playerNum === p && log.type === 'normal' && counts[log.diceValue] !== undefined) {
+            counts[log.diceValue]++;
+          }
+        });
+
+        let configColor = document.getElementById(`setupColor_P${p-1}`) ? document.getElementById(`setupColor_P${p-1}`).value : '#333333';
+        if (configColor === '#ffffff') configColor = '#333333';
+
+        html += `<tr>`;
+        html += `<td style="font-weight:bold; color:${configColor}">${p}번 플레이어</td>`;
+        for (let num = 1; num <= 6; num++) {
+          html += `<td>${counts[num]}</td>`;
+        }
+        html += `</tr>`;
+      }
+
+      // 2. 최종 화면 - 통합 히든 주사위 전용 독립 행 출력
+      let hiddenCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+      globalMatchLogs.forEach(log => {
+        if (log.type === 'hidden' && hiddenCounts[log.diceValue] !== undefined) {
+          hiddenCounts[log.diceValue]++;
+        }
+      });
+
+      html += `<tr style="background-color: #1e272e; color: #ffffff; font-weight: bold;">`;
+      html += `<td style="color: #ffffff;">★ 히든 주사위</td>`;
+      for (let num = 1; num <= 6; num++) {
+        html += `<td style="color: #ffffff;">${hiddenCounts[num]}</td>`; // 📌 '개' 제거 및 색상 변경
+      }
+      html += `</tr>`;
+
+      html += `</tbody></table>`;
+      document.getElementById('summaryTableContainer').innerHTML = html;
+    }
+
+    function executeUndoAction() {
+      if (isRolling || !undoStack) return;
+      
+      if (undoStack.logLengthBefore !== undefined) {
+        globalMatchLogs = globalMatchLogs.slice(0, undoStack.logLengthBefore);
+      }
+
+      currentPlayerIndex = undoStack.playerIndex;
+      const data = playerData[currentPlayerIndex];
+      data.normalCount = undoStack.normalCount;
+      data.hiddenCount = undoStack.hiddenCount;
+      data.round = undoStack.round;
+      
+      undoStack = null;
+      
+      isRollButtonHardLocked = false;
+      hasRolledThisTurn = false;
+
+      document.getElementById('resultText').innerText = "주사위를 던져보세요!";
+      document.getElementById('resultText').style.color = "#2c3e50";
+      
+      renderLiveSummaryTable(); // 되돌리기 시 실시간 집계표도 즉시 리셋 반영
+      syncDiceLayoutByMemory();
+    }
+
+    rollBtn.addEventListener('click', rollAllDice);
+    submitBtn.addEventListener('click', submitAndPassTurn);
+    undoBtn.addEventListener('click', executeUndoAction);
+    renderSetupColorGrid();
+  </script>
+</body>
+</html>
