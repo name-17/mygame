@@ -1,0 +1,238 @@
+<div class="control-panel">
+    <label for="dice-count-select">🎲 주사위 개수 : </label>
+    <select id="dice-count-select">
+        <option value="1" selected>1개</option>
+        <option value="2">2개</option>
+        <option value="3">3개</option>
+        <option value="4">4개</option>
+        <option value="5">5개</option>
+    </select>
+</div>
+
+<div class="game-container">
+    <div class="arena" id="arena"></div>
+    <div class="power-container">
+        <div class="power-bar" id="power-bar"></div>
+    </div>
+</div>
+
+<button class="btn-throw" id="throw-btn" onmousedown="startCharging()" onmouseup="stopCharging()" ontouchstart="startCharging()" ontouchend="stopCharging()">
+    🔥 주사위 던지기
+</button>
+
+<style>
+    body { margin: 0; padding: 0; background-color: #35654D; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; user-select: none; -webkit-user-select: none; }
+    .control-panel { margin-bottom: 15px; color: #f1f5f9; text-align: center; z-index: 20; }
+    .control-panel select { background: #053d05; color: #fbbf24; border: 1.5px solid #4A2E1B; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; outline: none; }
+    
+    .game-container { position: relative; display: flex; flex-direction: column; align-items: center; z-index: 5; }
+    .arena { position: relative; width: 360px; height: 360px; background: radial-gradient(circle, #5C4033 30%, #3D2314 100%); border: 14px solid #773F1A; border-radius: 50%; box-shadow: inset 0 12px 24px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; perspective: none; }
+    
+    .power-container { width: 300px; height: 10px; background: #053d05; border: 1.5px solid #334155; border-radius: 5px; margin-top: 20px; overflow: hidden; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+    .power-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #facc15, #ef4444); transition: none; }
+    
+    .dice-wrapper { position: absolute; width: 44px; height: 44px; left: calc(50% - 22px); top: calc(50% - 22px); pointer-events: none; visibility: hidden; transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1); transform-style: preserve-3d; }
+    .dice-shadow { display: none; } 
+    
+    /* [던져질 때 그림자 제거] 기본 상태에서는 투명도(opacity: 0) 처리를 하여 주사위가 구르는 동안 그림자가 보이지 않음 */
+    .dice-wrapper::after { content: ''; position: absolute; width: 44px; height: 44px; background: rgba(0, 0, 0, 0); border-radius: 9px; bottom: 0; left: 0; filter: blur(4px); transform: translateZ(-35px); display: block; opacity: 0; transition: all 0.3s ease-out; }
+    
+    /* [초밀착 45도 결과 그림자] 결과 및 정리 시점에만 투명도가 살아나며, 거리감을 가깝게 좁히기 위해 기존 좌표 오프셋을 바짝 들이밀어(bottom: -4px, left: 4px) 밀착 조절 */
+    .dice-wrapper.show-result-shadow::after { background: rgba(0, 0, 0, 0.65); bottom: -4px; left: 4px; filter: blur(3px); transform: translateZ(-35px) rotateX(10deg) rotateY(10deg); opacity: 1; }
+    
+    .cube { position: absolute; width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+    .cube-face { position: absolute; width: 44px; height: 44px; padding: 0; box-sizing: border-box; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform-style: preserve-3d; }
+    
+    .face-inner { width: 100%; height: 100%; background: linear-gradient(135deg, #242424 0%, #0f0f0f 100%); border: 1.5px solid rgba(212, 175, 55, 0.45); border-color: rgba(255,255,255,0.15) rgba(0,0,0,0.4) rgba(0,0,0,0.6) rgba(255,255,255,0.05); box-sizing: border-box; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.95), inset 2px 2px 4px rgba(255, 255, 255, 0.08); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    
+    .face-front  { transform: rotateY(  0deg) translateZ(22px); }
+    .face-back   { transform: rotateY(180deg) translateZ(22px); }
+    .face-left   { transform: rotateY(-90deg) translateZ(22px); }
+    .face-right  { transform: rotateY( 90deg) translateZ(22px); }
+    .face-top    { transform: rotateX( 90deg) translateZ(22px); }
+    .face-bottom { transform: rotateX(-90deg) translateZ(22px); }
+    
+    .dot { display: block; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, #fef08a 0%, #f59e0b 100%); box-shadow: 0 0 4px rgba(245, 158, 11, 0.6); }
+    .grid-container { display: grid; width: 100%; height: 100%; box-sizing: border-box; padding: 6px; align-items: center; justify-items: center; }
+    
+    .grid-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; height: 100%; }
+    .grid-2 .dot:nth-child(1) { justify-self: start; align-self: start; } .grid-2 .dot:nth-child(2) { justify-self: end; align-self: end; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+    .grid-3 .dot:nth-child(1) { grid-area: 1 / 1; } .grid-3 .dot:nth-child(2) { grid-area: 2 / 2; } .grid-3 .dot:nth-child(3) { grid-area: 3 / 3; }
+    .grid-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; }
+    .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+    .grid-5 .dot:nth-child(1) { grid-area: 1 / 1; } .grid-5 .dot:nth-child(2) { grid-area: 1 / 3; } .grid-5 .dot:nth-child(3) { grid-area: 2 / 2; } .grid-5 .dot:nth-child(4) { grid-area: 3 / 1; } .grid-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+    .grid-6 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 4px 14px; width: 100% !important; height: 100% !important; padding: 6px 7px; }
+    
+    .dice-wrapper.throwing { visibility: visible; animation: throw-x 0.9s forwards cubic-bezier(0.25, 1, 0.5, 1); } 
+    .dice-wrapper.throwing .cube { animation: throw-y-bounce 0.9s forwards ease-in-out, roll-cube 0.9s forwards cubic-bezier(0.05, 0.9, 0.25, 1); }
+    
+    @keyframes throw-x { 0% { transform: translate(var(--start-x), var(--start-y)); } 100% { transform: translate(var(--end-x), var(--end-y)); } }
+    @keyframes throw-y-bounce { 0% { transform: translateY(0) scale(0.6); } 35% { transform: translateY(var(--jump-height)) scale(1.2); } 65% { transform: translateY(0) scale(0.9); } 78% { transform: translateY(var(--bounce-height)) scale(1.0); } 90% { transform: translateY(0) scale(0.95); } 100% { transform: translateY(0) scale(1); } }
+    @keyframes roll-cube { 0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); } 100% { transform: rotateX(var(--target-rot-x)) rotateY(var(--target-rot-y)) rotateZ(var(--target-rot-z)); } }
+    
+    .btn-throw { margin-top: 25px; padding: 16px 36px; font-size: 16px; font-weight: 600; letter-spacing: -0.5px; color: #121212; background-color: #fbbf24; border: none; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3); transition: background-color 0.2s; z-index: 30; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+    .btn-throw:hover { background-color: #f59e0b; }
+    .btn-throw:disabled { background-color: #64748b !important; color: #94a3b8; cursor: not-allowed; box-shadow: none; opacity: 0.6; }
+</style>
+<script>
+    const diceRotations = { 
+        1: { x: 0, y: 0, z: 0 }, 2: { x: 0, y: 180, z: 0 }, 3: { x: 0, y: 90, z: 0 }, 
+        4: { x: 0, y: -90, z: 0 }, 5: { x: -90, y: 0, z: 0 }, 6: { x: 90, y: 0, z: 0 } 
+    };
+    
+    let currentDiceList = [];
+    let placedDicePositions = [];
+    let chargeInterval = null;
+    let powerLevel = 0, chargingUp = true;
+    let sequenceTimer = null;
+    let throwTimers = []; 
+    let isThrowing = false; 
+
+    function startCharging() {
+        if (isThrowing || chargeInterval) return;
+        powerLevel = 0; chargingUp = true;
+        
+        if (sequenceTimer) { clearTimeout(sequenceTimer); sequenceTimer = null; }
+        throwTimers.forEach(t => clearTimeout(t)); throwTimers = [];
+
+        currentDiceList = [];
+        placedDicePositions = [];
+        const oldDice = document.querySelectorAll('.dice-wrapper');
+        oldDice.forEach(diceNode => {
+            diceNode.innerHTML = '';
+            diceNode.remove();
+        });
+
+        const powerBar = document.getElementById('power-bar');
+        chargeInterval = setInterval(() => {
+            if (chargingUp) { powerLevel += 4; if(powerLevel >= 100) chargingUp = false; }
+            else { powerLevel -= 4; if(powerLevel <= 0) chargingUp = true; }
+            powerBar.style.width = powerLevel + '%';
+        }, 20);
+    }
+
+    function stopCharging() {
+        if (!chargeInterval) return;
+        clearInterval(chargeInterval); chargeInterval = null;
+        
+        isThrowing = true;
+        document.getElementById('throw-btn').disabled = true;
+        
+        const finalPower = powerLevel; 
+        document.getElementById('power-bar').style.width = '0%';
+
+        const diceToThrow = parseInt(document.getElementById('dice-count-select').value);
+        
+        for (let i = 0; i < diceToThrow; i++) {
+            const t = setTimeout(() => {
+                executeSingleThrow(finalPower);
+            }, i * 130);
+            throwTimers.push(t);
+        }
+
+        const totalWaitTime = 950 + (diceToThrow * 130) + 500;
+        
+        // 주사위 투척 애니메이션 종료 직후인 900ms 부근 스케줄에 맞추어 초밀착 45도 그림자가 드러나도록 제어
+        setTimeout(() => {
+            const allDice = document.querySelectorAll('.dice-wrapper');
+            allDice.forEach(dice => dice.classList.add('show-result-shadow'));
+        }, 900 + (diceToThrow * 130));
+
+        sequenceTimer = setTimeout(() => {
+            sortAndArrangeDiceLine();
+            isThrowing = false;
+            document.getElementById('throw-btn').disabled = false;
+        }, totalWaitTime);
+    }
+
+    function executeSingleThrow(power) {
+        const arena = document.getElementById('arena');
+        const wrapper = document.createElement('div'); wrapper.className = 'dice-wrapper';
+        const cube = document.createElement('div'); cube.className = 'cube';
+        
+        const facesData = [
+            { class: 'face-front', html: '<div class="grid-container grid-1"><span class="dot"></span></div>' }, 
+            { class: 'face-back', html: '<div class="grid-container grid-2"><span class="dot"></span><span class="dot"></span></div>' }, 
+            { class: 'face-left', html: '<div class="grid-container grid-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' },
+            { class: 'face-right', html: '<div class="grid-container grid-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' }, 
+            { class: 'face-top', html: '<div class="grid-container grid-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' }, 
+            { class: 'face-bottom', html: '<div class="grid-container grid-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' }
+        ];
+        
+        facesData.forEach(info => { 
+            const face = document.createElement('div'); 
+            face.className = `cube-face ${info.class}`; 
+            
+            const inner = document.createElement('div');
+            inner.className = 'face-inner';
+            inner.innerHTML = info.html;
+            
+            face.appendChild(inner);
+            cube.appendChild(face); 
+        });
+        wrapper.appendChild(cube); arena.appendChild(wrapper);
+
+        const resultValue = Math.floor(Math.random() * 6) + 1; const finalRot = diceRotations[resultValue];
+        const targetRotX = 1080 + finalRot.x; const targetRotY = 1080 + finalRot.y; const targetRotZ = 1080 + finalRot.z;
+
+        const startX = 0; const startY = 220;
+        const safeRadiusLimit = 52; 
+        let endX = 0, endY = 0;
+
+        const randomAngle = Math.random() * Math.PI * 2;
+        const randomRadius = (Math.random() * 60) + (power * 0.35); 
+        const targetBaseX = Math.cos(randomAngle) * randomRadius;
+        const targetBaseY = Math.sin(randomAngle) * randomRadius - 20;
+
+        for (let attempt = 0; attempt < 1000; attempt++) {
+            const spiralRadius = (attempt * 0.15); const searchAngle = attempt * 0.45; 
+            let testX = targetBaseX + (Math.cos(searchAngle) * spiralRadius);
+            let testY = targetBaseY + (Math.sin(searchAngle) * spiralRadius);
+            
+            const testRadius = Math.hypot(testX, testY);
+            if (testRadius > 95) { testX = (testX / testRadius) * 95; testY = (testY / testRadius) * 95; }
+            
+            const overlapDetected = placedDicePositions.some(pos => Math.hypot(testX - pos.x, testY - pos.y) < safeRadiusLimit);
+            if (!overlapDetected) { endX = testX; endY = testY; break; }
+        }
+
+        placedDicePositions.push({ x: endX, y: endY });
+        currentDiceList.push({ value: resultValue, element: wrapper, cube: cube, finalRotX: targetRotX, finalRotY: targetRotY, finalRotZ: targetRotZ });
+
+        const jumpHeight = -100 - (power * 0.8) + 'px';
+        const bounceHeight = -12 - (power * 0.25) + 'px';
+
+        wrapper.style.setProperty('--jump-height', jumpHeight);
+        wrapper.style.setProperty('--bounce-height', bounceHeight);
+        wrapper.style.setProperty('--start-x', `${startX}px`); 
+        wrapper.style.setProperty('--start-y', `${startY}px`); 
+        wrapper.style.setProperty('--end-x', `${endX}px`); 
+        wrapper.style.setProperty('--end-y', `${endY}px`);
+        cube.style.setProperty('--target-rot-x', `${targetRotX}deg`); 
+        cube.style.setProperty('--target-rot-y', `${targetRotY}deg`); 
+        cube.style.setProperty('--target-rot-z', `${targetRotZ}deg`);
+        
+        void wrapper.offsetWidth; 
+        wrapper.classList.add('throwing');
+    }
+
+    function sortAndArrangeDiceLine() {
+        if (currentDiceList.length === 0) return;
+        currentDiceList.sort((a, b) => a.value - b.value);
+        const count = currentDiceList.length;
+        const diceSpacing = 52; 
+        const startLineX = -((count - 1) * diceSpacing) / 2;
+
+        currentDiceList.forEach((dice, idx) => {
+            dice.element.classList.remove('throwing');
+            dice.element.classList.add('show-result-shadow');
+            dice.element.style.visibility = 'visible';
+            const linePositionX = startLineX + (idx * diceSpacing);
+            const linePositionY = 0; 
+            dice.element.style.transform = `translate(${linePositionX}px, ${linePositionY}px)`;
+            dice.cube.style.transform = `rotateX(${dice.finalRotX}deg) rotateY(${dice.finalRotY}deg) rotateZ(${dice.finalRotZ}deg)`;
+        });
+    }
+</script>
