@@ -25,7 +25,7 @@
         }
         .container {
             display: grid;
-            /* 가로 3열 고정 설정 */
+            /* 💻 데스크톱 기본: 가로 3열 배치 (9개이므로 자동 3x3 형성) */
             grid-template-columns: repeat(3, 1fr); 
             gap: 25px;
             max-width: 900px; 
@@ -60,28 +60,30 @@
             font-weight: bold;
         }
 
-        /* 🛠️ 데스크톱 정렬 보정: 3열 구조에서 7번째 마지막 카드를 하단 중앙(2번째 칸)으로 명확히 배치 */
-        .game-card.last-item {
-            grid-column: 2;
-        }
-
-        /* 태블릿 및 패드 대응 반응형 설정 */
+        /* 📱 태블릿 및 패드 대응 (화면 폭 768px 이하) */
         @media (max-width: 768px) {
             .container {
-                grid-template-columns: repeat(2, 1fr); /* 가로 2열 배치 */
+                grid-template-columns: repeat(2, 1fr); 
             }
-            /* 2열 구조에서는 7번째 카드가 정렬을 깨트리지 않도록 원래대로 해제 */
-            .game-card.last-item {
-                grid-column: auto;
+            
+            /* 💡 오른쪽 정렬되던 문제를 해결하고 완벽한 하단 중앙 정렬을 적용했습니다. */
+            .game-card:last-child:nth-child(odd) {
+                grid-column: span 2; 
+                max-width: calc(50% - 12.5px); 
+                margin: 0 auto; 
+                width: 100%;
             }
         }
-        /* 스마트폰 대응 반응형 설정 */
+        
+        /* 📱 스마트폰 대응 (화면 폭 480px 이하) */
         @media (max-width: 480px) {
             .container {
-                grid-template-columns: 1fr; /* 가로 1열 배치 */
+                grid-template-columns: 1fr; 
             }
-            .game-card.last-item {
+            .game-card:last-child:nth-child(odd) {
                 grid-column: auto;
+                max-width: none;
+                margin: 0;
             }
         }
     </style>
@@ -92,56 +94,39 @@
     <p class="subtitle">플레이하고 싶은 게임을 선택하세요!</p>
 
     <div class="container">
-        <!-- 1행 1열 -->
         <a href="mygame1_v4.7.html" class="game-card" style="--card-color: #ff5e62;">
             <div class="game-icon" aria-hidden="true">🎫</div>
             <div class="game-title">추억의 뽑기</div>
         </a>
-
-        <!-- 1행 2열 -->
         <a href="mygame2_v2.3.html" class="game-card" style="--card-color: #ff9966;">
             <div class="game-icon" aria-hidden="true">🧩</div>
             <div class="game-title">사진 맞히기</div>
         </a>
-
-        <!-- 1행 3열 -->
         <a href="mygame3_v1.1.html" class="game-card" style="--card-color: #00b4db;">
             <div class="game-icon" aria-hidden="true">🐍</div>
             <div class="game-title">뱀주사위 대결(테스트중)</div>
         </a>
-
-        <!-- 2행 1열 -->
         <a href="mygame4_v1.2.html" class="game-card" style="--card-color: #11998e;">
             <div class="game-icon" aria-hidden="true">🪜</div>
             <div class="game-title">히든 사다리 타기</div>
         </a>
-
-        <!-- 2행 2열 -->
         <a href="mygame5_v1.5.html" class="game-card" style="--card-color: #b31217;">
             <div class="game-icon" aria-hidden="true">🏁</div>
             <div class="game-title">주루마블(테스트중)</div>
         </a>
-
-        <!-- 2행 3열 -->
         <a href="mygame6_v3.5.html" class="game-card" style="--card-color: #8e2de2;">
             <div class="game-icon" aria-hidden="true">🎲</div>
             <div class="game-title">주사위 굴리기</div>
         </a>
-
-        <!-- 3행 1열 (기존 7번째 카드 - last-item 클래스 제거) -->
         <a href="mygame7_v1.8.html" class="game-card" style="--card-color: #eccc68;">
             <div class="game-icon" aria-hidden="true">🎡</div>
             <div class="game-title">추억의 행운복권</div>
         </a>
-
-        <!-- 🛠️ 3행 2열 (새로 추가된 8번째 카드 - 중앙 정렬 적용) -->
         <a href="mygame8_v4.2.html" class="game-card" style="--card-color: #4a90e2;">
             <div class="game-icon" aria-hidden="true">💰</div>
             <div class="game-title">라스베가스</div>
         </a>
-
-        <!-- 🛠️ 3행 3열 (새로 추가된 8번째 카드 - 중앙 정렬 적용) -->
-        <a href="dice_castmotion_8.html" class="game-card last-item" style="--card-color: #ff5e62;">
+        <a href="dice_castmotion_8.html" class="game-card" style="--card-color: #ff5e62;">
             <div class="game-icon" aria-hidden="true">🎲</div>
             <div class="game-title">주사위 굴리기(카지노)</div>
         </a>        
