@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D 야추 다이스 Game</title>
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #35654D;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-y: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
+  padding: 20px;
+}
+.game-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 360px;
+}
+.main-game-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.game-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
+  width: 100%;
+}
+.arena {
+  position: relative;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, #5C4033 30%, #3D2314 100%);
+  border: 14px solid #773F1A;
+  border-radius: 50%;
+  box-shadow: inset 0 12px 24px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: none;
+  box-sizing: border-box;
+}
+.power-container {
+  width: 300px;
+  height: 10px;
+  background: #14291f;
+  border: 1.5px solid #4a3b32;
+  border-radius: 5px;
+  margin-top: 15px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.power-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #facc15, #ef4444);
+  transition: none;
+}
+:root {
+  --dice-size: 44px;
+  --dice-radius: 22px;
+  --dice-translate: 22px;
+  --dice-shadow-z: -35px;
+}
+.dice-wrapper {
+  position: absolute;
+  width: var(--dice-size);
+  height: var(--dice-size);
+  left: calc(50% - var(--dice-radius));
+  top: calc(50% - var(--dice-radius));
+  pointer-events: auto;
+  visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
+  z-index: 10;
+  cursor: pointer;
+}
+.dice-wrapper.held {
+  outline: 3px solid #fbbf24;
+  outline-offset: 4px;
+  border-radius: 8px;
+  box-shadow: 0 0 15px #fbbf24;
+}
+.dice-wrapper::after {
+  content: '';
+  position: absolute;
+  width: var(--dice-size);
+  height: var(--dice-size);
+  background: rgba(0, 0, 0, 0);
+  border-radius: 9px;
+  bottom: 0;
+  left: 0;
+  filter: blur(4px);
+  transform: translateZ(var(--dice-shadow-z));
+  display: block;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+.dice-wrapper.show-result-shadow::after {
+  background: rgba(0, 0, 0, 0.65);
+  bottom: -4px;
+  left: 4px;
+  filter: blur(3px);
+  transform: translateZ(var(--dice-shadow-z)) rotateX(10deg) rotateY(10deg);
+  opacity: 1;
+}
+.cube {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  will-change: transform;
+}
+.cube-face {
+  position: absolute;
+  width: var(--dice-size);
+  height: var(--dice-size);
+  padding: 0;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+.face-inner {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #242424 0%, #0f0f0f 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.45);
+  border-color: rgba(255,255,255,0.15) rgba(0,0,0,0.4) rgba(0,0,0,0.6) rgba(255,255,255,0.05);
+  box-sizing: border-box;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.95), inset 2px 2px 4px rgba(255, 255, 255, 0.08);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+.face-front { transform: rotateY( 0deg) translateZ(var(--dice-translate)); -webkit-transform: rotateY( 0deg) translateZ(var(--dice-translate)); }
+.face-back { transform: rotateY(180deg) translateZ(var(--dice-translate)); -webkit-transform: rotateY(180deg) translateZ(var(--dice-translate)); }
+.face-left { transform: rotateY(-90deg) translateZ(var(--dice-translate)); -webkit-transform: rotateY(-90deg) translateZ(var(--dice-translate)); }
+.face-right { transform: rotateY( 90deg) translateZ(var(--dice-translate)); -webkit-transform: rotateY( 90deg) translateZ(var(--dice-translate)); }
+.face-top { transform: rotateX( 90deg) translateZ(var(--dice-translate)); -webkit-transform: rotateX( 90deg) translateZ(var(--dice-translate)); }
+.face-bottom { transform: rotateX(-90deg) translateZ(var(--dice-translate)); -webkit-transform: rotateX(-90deg) translateZ(var(--dice-translate)); }
+.dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fef08a 0%, #f59e0b 100%);
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.6);
+}
+.grid-container {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  align-items: center;
+  justify-items: center;
+}
+.grid-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.grid-2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; height: 100%; }
+.grid-2 .dot:nth-child(1) { justify-self: start; align-self: start; }
+.grid-2 .dot:nth-child(2) { justify-self: end; align-self: end; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+.grid-3 .dot:nth-child(1) { grid-area: 1 / 1; }
+.grid-3 .dot:nth-child(2) { grid-area: 2 / 2; }
+.grid-3 .dot:nth-child(3) { grid-area: 3 / 3; }
+.grid-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; }
+.grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+.grid-5 .dot:nth-child(1) { grid-area: 1 / 1; }
+.grid-5 .dot:nth-child(2) { grid-area: 1 / 3; }
+.grid-5 .dot:nth-child(3) { grid-area: 2 / 2; }
+.grid-5 .dot:nth-child(4) { grid-area: 3 / 1; }
+.grid-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+.grid-6 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 4px 14px; width: 100% !important; height: 100% !important; padding: 6px 7px; }
+
+.btn-throw {
+  margin-top: 15px;
+  padding: 14px 36px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #121212;
+  background-color: #fbbf24;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+  transition: background-color 0.2s;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+.btn-throw:hover { background-color: #f59e0b; }
+.btn-throw:disabled { background-color: #64748b !important; color: #94a3b8; cursor: not-allowed; box-shadow: none; opacity: 0.6; }
+
+/* 🍏 라운드 도트 및 남은 횟수 주사위 X 마크 시각 UI 스타일 */
+.status-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+.round-indicator {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  align-items: center;
+}
+.round-dot {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #4a3b32;
+  border-radius: 50%;
+  background-color: #14291f;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  transition: all 0.3s ease;
+}
+.round-dot.active {
+  background-color: #fbbf24;
+  border-color: #d4af37;
+  box-shadow: 0 0 8px #fbbf24, inset 0 1px 1px rgba(255,255,255,0.6);
+}
+.round-dot.completed {
+  background-color: #4a5568;
+  border-color: #2d3748;
+}
+.rolls-container {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2px;
+}
+.roll-dice-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  background-color: #f8fafc;
+  border-radius: 4px;
+  border: 1.5px solid #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.roll-dice-icon::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+.roll-dice-icon.used::after {
+  content: '✕';
+  color: #ef4444;
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 20px;
+  text-align: center;
+  text-shadow: 0 0 2px rgba(0,0,0,0.6);
+}
+
+/* 🪵 원목 스코어보드 고대비 스타일 구문 */
+.scoreboard {
+  width: 100%;
+  background: radial-gradient(circle, #22120a 0%, #150a04 100%);
+  border: 4px solid #57331e;
+  border-radius: 12px;
+  padding: 10px;
+  box-sizing: border-box;
+  color: #ffffff;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.05);
+}
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.score-table th, .score-table td {
+  padding: 7px 8px;
+  text-align: left;
+  border-bottom: 1px solid #381e10;
+}
+.score-table th { 
+  background-color: #0c0502; 
+  color: #fbbf24;
+  font-weight: bold;
+}
+.score-row.selectable { cursor: pointer; transition: background-color 0.15s; }
+.score-row.selectable:hover { background-color: #4a2817; }
+.score-cell.preview { color: #a18374; font-style: italic; font-weight: 500; }
+.score-cell.confirmed { color: #ffd000; font-weight: bold; font-size: 14px; text-shadow: 0 0 6px rgba(255,208,0,0.4); }
+.total-score { font-weight: bold; color: #ff4d6d; background-color: #0c0502; }
+
+@media (min-width: 768px) {
+  .game-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    max-width: 800px;
+    gap: 30px;
+  }
+  .main-game-section {
+    width: 360px;
+  }
+  .scoreboard {
+    flex: 1;
+    margin-top: 0px; /* PC 모드 수평 매칭 */
+  }
+}
+
+@media (max-width: 400px) {
+  :root {
+    --dice-size: 40px;
+    --dice-radius: 20px;
+    --dice-translate: 20px;
+    --dice-shadow-z: -31px;
+  }
+  .arena { width: 320px; height: 320px; border-width: 11px; }
+  .power-container { width: 265px; }
+  .dot { width: 5.5px; height: 5.5px; }
+  .grid-container { padding: 4.5px; }
+  .grid-4 { gap: 5.5px; }
+  .grid-6 { gap: 3.5px 11px; padding: 5.5px 6.5px; }
+  .btn-throw { padding: 12px 30px; font-size: 15px; margin-top: 12px; }
+}
+</style>
+</head>
+<body>
+<div class="game-layout">
+  
+  <!-- 🍏 왼쪽 영역: 신규 도트/주사위 구조 상태창, 경기장 원형판, 충전 바, 투척 버튼 -->
+  <div class="main-game-section">
+    <div class="status-panel">
+      <!-- 12개의 원형 라운드 인디케이터 도트 -->
+      <div class="round-indicator" id="round-indicator-box">
+        <div class="round-dot active"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+      </div>
+      <!-- 남은 기회 표시용 미니 주사위 3개 그래픽 상자 -->
+      <div class="rolls-container" id="rolls-indicator-box">
+        <div class="roll-dice-icon">🎲</div>
+        <div class="roll-dice-icon">🎲</div>
+        <div class="roll-dice-icon">🎲</div>
+      </div>
+    </div>
+
+    <div class="game-container">
+      <div class="arena" id="arena"></div>
+      <div class="power-container">
+        <div class="power-bar" id="power-bar"></div>
+      </div>
+    </div>
+
+    <button class="btn-throw" id="throw-btn" onmousedown="startCharging()" onmouseup="stopCharging()" ontouchstart="startCharging()" ontouchend="touchendStopCharging(event)">
+      🔥 주사위 던지기
+    </button>
+  </div>
+
+  <!-- 🍏 오른쪽 영역: 고대비 명도 튜닝 원목 야추 점수판 -->
+  <div class="scoreboard">
+    <table class="score-table">
+      <thead>
+        <tr>
+          <th>족보 종류</th>
+          <th>설명</th>
+          <th style="text-align: right; width: 60px;">점수</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="score-row selectable" data-category="aces"><td>Ones (1)</td><td style="color:#d1c7bd;">눈금 1 합계</td><td id="score-aces" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="twos"><td>Twos (2)</td><td style="color:#d1c7bd;">눈금 2 합계</td><td id="score-twos" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="threes"><td>Threes (3)</td><td style="color:#d1c7bd;">눈금 3 합계</td><td id="score-threes" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="fours"><td>Fours (4)</td><td style="color:#d1c7bd;">눈금 4 합계</td><td id="score-fours" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="fives"><td>Fives (5)</td><td style="color:#d1c7bd;">눈금 5 합계</td><td id="score-fives" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="sixes"><td>Sixes (6)</td><td style="color:#d1c7bd;">눈금 6 합계</td><td id="score-sixes" class="score-cell preview">-</td></tr>
+        <tr class="total-score"><td>상단 보너스</td><td style="color:#ffffff;">합계 63점 이상시</td><td id="score-bonus" style="text-align: right; color:#fbbf24;">0 / 63 (+35)</td></tr>
+        
+        <tr class="score-row selectable" data-category="choice"><td>Choice</td><td style="color:#d1c7bd;">눈금 5개 총합</td><td id="score-choice" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="quad"><td>4 of a Kind</td><td style="color:#d1c7bd;">4개 동일 (총합)</td><td id="score-quad" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="fullhouse"><td>Full House</td><td style="color:#d1c7bd;">3개+2개 (총합)</td><td id="score-fullhouse" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="sstraight"><td>S. Straight</td><td style="color:#d1c7bd;">4개 연속 (15점)</td><td id="score-sstraight" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="lstraight"><td>L. Straight</td><td style="color:#d1c7bd;">5개 연속 (30점)</td><td id="score-lstraight" class="score-cell preview">-</td></tr>
+        <tr class="score-row selectable" data-category="yacht"><td>Yacht (야추)</td><td style="color:#d1c7bd;">5개 동일 (50점)</td><td id="score-yacht" class="score-cell preview">-</td></tr>
+        
+        <tr class="total-score" style="font-size: 15px;"><td>TOTAL SCORE</td><td style="color:#ffffff;">최종 누적 점수</td><td id="score-total" style="text-align: right; color:#ff4d6d;">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+<script>
+const diceRotations = {
+  1: { x: 0, y: 0, z: 0 },
+  2: { x: 0, y: 180, z: 0 },
+  3: { x: 0, y: 90, z: 0 },
+  4: { x: 0, y: -90, z: 0 },
+  5: { x: -90, y: 0, z: 0 },
+  6: { x: 90, y: 0, z: 0 }
+};
+
+let currentDiceList = Array(5).fill(null); 
+let placedDicePositions = [];
+let chargeInterval = null;
+let powerLevel = 0, chargingUp = true;
+let isThrowing = false;
+let animationFrameId = null;
+
+let currentRound = 1;
+let remainingRolls = 3;
+let confirmedScores = {}; 
+
+window.onload = function() {
+  initScoreboardEvents();
+  updateStatusPanel();
+};
+
+function touchendStopCharging(e) {
+  if(e) e.preventDefault();
+  stopCharging();
+}
+
+function startCharging() {
+  if (isThrowing || chargeInterval || remainingRolls <= 0) return;
+  powerLevel = 0;
+  chargingUp = true;
+  
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+  
+  currentDiceList.forEach((dice, idx) => {
+    if (dice && !dice.isHeld) {
+      dice.element.remove();
+      currentDiceList[idx] = null;
+    }
+  });
+  placedDicePositions = currentDiceList.filter(d => d !== null).map(d => ({ x: d.endX, y: d.endY }));
+
+  const powerBar = document.getElementById('power-bar');
+  chargeInterval = setInterval(() => {
+    if (chargingUp) {
+      powerLevel += 4;
+      if(powerLevel >= 100) chargingUp = false;
+    } else {
+      powerLevel -= 4;
+      if(powerLevel <= 0) chargingUp = true;
+    }
+    powerBar.style.width = powerLevel + '%';
+  }, 20);
+}
+
+function stopCharging() {
+  if (!chargeInterval) return;
+  clearInterval(chargeInterval);
+  chargeInterval = null;
+  isThrowing = true;
+  document.getElementById('throw-btn').disabled = true;
+  
+  remainingRolls--;
+  updateStatusPanel();
+  
+  const finalPower = powerLevel;
+  document.getElementById('power-bar').style.width = '0%';
+
+  let delayIdx = 0;
+  for (let i = 0; i < 5; i++) {
+    if (currentDiceList[i] === null) {
+      setTimeout(() => {
+        executeSingleThrow(finalPower, i);
+      }, delayIdx * 110);
+      delayIdx++;
+    }
+  }
+
+  const startTime = performance.now();
+  function updatePhysics() {
+    const now = performance.now();
+    const progress = Math.min((now - startTime) / 1050, 1);
+    const t_rolling = 1 - Math.pow(1 - progress, 2.8);
+    
+    currentDiceList.forEach(dice => {
+      if (dice && !dice.isHeld && progress < 1) {
+        const curX = dice.startX + (dice.endX - dice.startX) * t_rolling;
+        const curY = dice.startY + (dice.endY - dice.startY) * t_rolling;
+        dice.element.style.transform = `translate3d(${curX}px, ${curY}px, 0px)`;
+        dice.element.style.webkitTransform = `translate3d(${curX}px, ${curY}px, 0px)`;
+        const rotX = (dice.spinSpeedX * (1 - t_rolling)) + dice.finalRotX;
+        const rotY = (dice.spinSpeedY * (1 - t_rolling)) + dice.finalRotY;
+        const rotZ = (dice.spinSpeedZ * (1 - t_rolling)) + dice.finalRotZ;
+        dice.cube.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`;
+        dice.cube.style.webkitTransform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`;
+      }
+    });
+
+    if (progress < 1) {
+      animationFrameId = requestAnimationFrame(updatePhysics);
+    } else {
+      // 🍏 지연 시간을 1초에서 0.5초(500ms)로 신속 변경 완료
+      setTimeout(() => {
+        sortAndArrangeDiceLine();
+      }, 500);
+    }
+  }
+  animationFrameId = requestAnimationFrame(updatePhysics);
+}
+
+function executeSingleThrow(power, targetIndex) {
+  const arena = document.getElementById('arena');
+  const wrapper = document.createElement('div');
+  wrapper.className = 'dice-wrapper';
+  wrapper.onclick = () => toggleHoldDice(targetIndex);
+
+  const cube = document.createElement('div');
+  cube.className = 'cube';
+  const facesData = [
+    { class: 'face-front', html: '<div class="grid-container grid-1"><span class="dot"></span></div>' },
+    { class: 'face-back', html: '<div class="grid-container grid-2"><span class="dot"></span><span class="dot"></span></div>' },
+    { class: 'face-left', html: '<div class="grid-container grid-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' },
+    { class: 'face-right', html: '<div class="grid-container grid-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' },
+    { class: 'face-top', html: '<div class="grid-container grid-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' },
+    { class: 'face-bottom', html: '<div class="grid-container grid-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>' }
+  ];
+  
+  facesData.forEach(info => {
+    const face = document.createElement('div');
+    face.className = `cube-face ${info.class}`;
+    const inner = document.createElement('div');
+    inner.className = 'face-inner';
+    inner.innerHTML = info.html;
+    face.appendChild(inner);
+    cube.appendChild(face);
+  });
+  
+  wrapper.appendChild(cube);
+  arena.appendChild(wrapper);
+
+  const resultValue = Math.floor(Math.random() * 6) + 1;
+  const finalRot = diceRotations[resultValue];
+  const startX = (Math.random() * 80) - 40;
+  const startY = 220;
+  const isMobile = window.innerWidth <= 400;
+  
+  const safeRadiusLimit = isMobile ? 42 : 46;
+  const arenaMaxRadius = isMobile ? 125 : 145; 
+  let endX = 0, endY = 0;
+  const randomAngle = Math.random() * Math.PI * 2;
+  const minRadius = 10;
+  const maxRadiusLimit = minRadius + (power * (arenaMaxRadius / 100));
+  const randomRadius = minRadius + Math.random() * (maxRadiusLimit - minRadius);
+  const targetBaseX = Math.cos(randomAngle) * randomRadius;
+  const targetBaseY = Math.sin(randomAngle) * randomRadius;
+
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const spiralRadius = (attempt * 0.2);
+    const searchAngle = attempt * 0.55;
+    let testX = targetBaseX + (Math.cos(searchAngle) * spiralRadius);
+    let testY = targetBaseY + (Math.sin(searchAngle) * spiralRadius);
+    const testRadius = Math.hypot(testX, testY);
+    if (testRadius > arenaMaxRadius) {
+      testX = (testX / testRadius) * arenaMaxRadius;
+      testY = (testY / testRadius) * arenaMaxRadius;
+    }
+    if (!placedDicePositions.some(pos => Math.hypot(testX - pos.x, testY - pos.y) < safeRadiusLimit)) {
+      endX = testX;
+      endY = testY;
+      break;
+    }
+  }
+  placedDicePositions.push({ x: endX, y: endY });
+  const directionSignX = Math.random() > 0.5 ? 1 : -1;
+  const directionSignY = Math.random() > 0.5 ? 1 : -1;
+  const powerReductionRot = (100 - power) * 7.2;
+
+  currentDiceList[targetIndex] = {
+    value: resultValue,
+    element: wrapper,
+    cube: cube,
+    startX: startX,
+    startY: startY,
+    endX: endX,
+    endY: endY,
+    finalRotX: finalRot.x,
+    finalRotY: finalRot.y,
+    finalRotZ: finalRot.z,
+    spinSpeedX: (1440 + Math.floor(Math.random() * 360) - powerReductionRot) * directionSignY,
+    spinSpeedY: (1440 + Math.floor(Math.random() * 360) - powerReductionRot) * directionSignX,
+    spinSpeedZ: (1080 + Math.floor(Math.random() * 360) - powerReductionRot),
+    isHeld: false
+  };
+  wrapper.style.visibility = 'visible';
+}
+function sortAndArrangeDiceLine() {
+  const activeDice = currentDiceList.filter(d => d !== null);
+  if (activeDice.length === 0) return;
+  
+  const diceSpacing = window.innerWidth <= 400 ? 46 : 52;
+  const startLineX = -((5 - 1) * diceSpacing) / 2; 
+  
+  currentDiceList.forEach((dice, idx) => {
+    if(dice) {
+      dice.element.classList.add('show-result-shadow');
+      dice.element.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+      dice.element.style.webkitTransition = '-webkit-transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+      const linePositionX = startLineX + (idx * diceSpacing);
+      
+      dice.element.style.transform = `translate3d(${linePositionX}px, ${dice.isHeld ? -35 : 0}px, 0px)`;
+      dice.element.style.webkitTransform = `translate3d(${linePositionX}px, ${dice.isHeld ? -35 : 0}px, 0px)`;
+      
+      const targetStyle = `rotateX(${dice.finalRotX}deg) rotateY(${dice.finalRotY}deg) rotateZ(${dice.finalRotZ}deg)`;
+      dice.cube.style.transform = targetStyle;
+      dice.cube.style.webkitTransform = targetStyle;
+    }
+  });
+
+  setTimeout(() => {
+    isThrowing = false;
+    if (remainingRolls > 0) {
+      document.getElementById('throw-btn').disabled = false;
+    }
+    previewScores(); 
+  }, 400);
+}
+
+function toggleHoldDice(index) {
+  if (isThrowing || remainingRolls === 3 || remainingRolls < 0) return; 
+  const dice = currentDiceList[index];
+  if (!dice) return;
+
+  dice.isHeld = !dice.isHeld;
+  if (dice.isHeld) {
+    dice.element.classList.add('held');
+  } else {
+    dice.element.classList.remove('held');
+  }
+  
+  const diceSpacing = window.innerWidth <= 400 ? 46 : 52;
+  const startLineX = -((5 - 1) * diceSpacing) / 2;
+  const linePositionX = startLineX + (index * diceSpacing);
+  dice.element.style.transform = `translate3d(${linePositionX}px, ${dice.isHeld ? -35 : 0}px, 0px)`;
+  dice.element.style.webkitTransform = `translate3d(${linePositionX}px, ${dice.isHeld ? -35 : 0}px, 0px)`;
+}
+
+// 🍏 원형 도트 및 주사위 X 마크 시각적 렌더링 보정 함수
+function updateStatusPanel() {
+  // 12개 라운드 원형 도트 렌더링 연산
+  const dotBox = document.getElementById('round-indicator-box');
+  if (dotBox) {
+    const dots = dotBox.getElementsByClassName('round-dot');
+    for (let i = 0; i < dots.length; i++) {
+      dots[i].className = 'round-dot'; // 초기화
+      if (i < currentRound - 1) {
+        dots[i].classList.add('completed'); // 지나간 라운드는 회색 도트
+      } else if (i === currentRound - 1) {
+        dots[i].classList.add('active'); // 현재 라운드는 금색 반짝 도트
+      }
+    }
+  }
+
+  // 주사위 3개 기회 차감 X 마크 클래스 렌더링 연산
+  const rollsBox = document.getElementById('rolls-indicator-box');
+  if (rollsBox) {
+    const icons = rollsBox.getElementsByClassName('roll-dice-icon');
+    // 사용한 횟수(3 - remainingRolls)만큼 뒤에서부터 빨간 X 마크 표기
+    const usedCount = 3 - remainingRolls;
+    for (let i = 0; i < icons.length; i++) {
+      if (i < usedCount) {
+        icons[i].classList.add('used');
+      } else {
+        icons[i].classList.remove('used');
+      }
+    }
+  }
+}
+
+function calculateScore(category, diceValues) {
+  const counts = Array(7).fill(0);
+  let sum = 0;
+  diceValues.forEach(v => { counts[v]++; sum += v; });
+
+  switch(category) {
+    case 'aces': return counts[1] * 1;
+    case 'twos': return counts[2] * 2;
+    case 'threes': return counts[3] * 3;
+    case 'fours': return counts[4] * 4;
+    case 'fives': return counts[5] * 5;
+    case 'sixes': return counts[6] * 6;
+    case 'choice': return sum;
+    case 'quad':
+      return counts.some(c => c >= 4) ? sum : 0;
+    case 'fullhouse':
+      const hasThree = counts.includes(3);
+      const hasTwo = counts.includes(2);
+      const hasFive = counts.includes(5);
+      return (hasThree && hasTwo) || hasFive ? sum : 0;
+    case 'sstraight':
+      const strStr = counts.map((c, i) => i > 0 && c > 0 ? '1' : '0').join('').substring(1);
+      return strStr.includes('1111') || (counts[1]>0 && counts[2]>0 && counts[3]>0 && counts[4]>0) || (counts[2]>0 && counts[3]>0 && counts[4]>0 && counts[5]>0) || (counts[3]>0 && counts[4]>0 && counts[5]>0 && counts[6]>0) ? 15 : 0;
+    case 'lstraight':
+      const lStr = counts.map((c, i) => i > 0 && c > 0 ? '1' : '0').join('').substring(1);
+      return lStr === '111110' || lStr === '011111' ? 30 : 0;
+    case 'yacht':
+      return counts.includes(5) ? 50 : 0;
+    default: return 0;
+  }
+}
+
+function previewScores() {
+  const activeDice = currentDiceList.filter(d => d !== null);
+  if (activeDice.length < 5) return;
+  const values = currentDiceList.map(d => d.value);
+
+  const categories = ['aces', 'twos', 'threes', 'fours', 'fives', 'sixes', 'choice', 'quad', 'fullhouse', 'sstraight', 'lstraight', 'yacht'];
+  categories.forEach(cat => {
+    if (confirmedScores[cat] === undefined) {
+      const pScore = calculateScore(cat, values);
+      const cell = document.getElementById(`score-${cat}`);
+      cell.innerText = pScore;
+      cell.className = 'score-cell preview';
+    }
+  });
+}
+
+function initScoreboardEvents() {
+  document.querySelectorAll('.score-table .score-row.selectable').forEach(row => {
+    row.onclick = function() {
+      const category = this.getAttribute('data-category');
+      const activeDice = currentDiceList.filter(d => d !== null);
+      
+      if (activeDice.length < 5 || isThrowing || confirmedScores[category] !== undefined) return;
+
+      const values = currentDiceList.map(d => d.value);
+      const finalScore = calculateScore(category, values);
+      
+      confirmedScores[category] = finalScore;
+      const cell = document.getElementById(`score-${category}`);
+      cell.innerText = finalScore;
+      cell.className = 'score-cell confirmed';
+      this.classList.remove('selectable');
+
+      calculateTotalScores();
+      nextRound();
+    };
+  });
+}
+
+function calculateTotalScores() {
+  let upperSum = 0;
+  const upperCategories = ['aces', 'twos', 'threes', 'fours', 'fives', 'sixes'];
+  upperCategories.forEach(cat => {
+    if (confirmedScores[cat] !== undefined) upperSum += confirmedScores[cat];
+  });
+
+  let bonusScore = 0;
+  if (upperSum >= 63) bonusScore = 35;
+  document.getElementById('score-bonus').innerText = `${upperSum} / 63 (${bonusScore >= 35 ? '+35' : '+0'})`;
+
+  let totalSum = upperSum + bonusScore;
+  const lowerCategories = ['choice', 'quad', 'fullhouse', 'sstraight', 'lstraight', 'yacht'];
+  lowerCategories.forEach(cat => {
+    if (confirmedScores[cat] !== undefined) totalSum += confirmedScores[cat];
+  });
+
+  document.getElementById('score-total').innerText = totalSum;
+}
+
+function nextRound() {
+  if (currentRound >= 12) {
+    // 🍏 모바일 앱에서도 100% 안전하게 구동되도록 confirm을 빼고 알림 후 자동 리셋으로 변경했습니다.
+    alert(`🎉 게임 종료!\n당신의 최종 점수는 ${document.getElementById('score-total').innerText}점 입니다!\n\n확인을 누르면 게임을 다시 시작합니다.`);
+    resetWholeGame();
+    return;
+  }
+  
+  currentRound++;
+  remainingRolls = 3;
+  updateStatusPanel();
+
+  currentDiceList = Array(5).fill(null);
+  placedDicePositions = [];
+  document.querySelectorAll('.dice-wrapper').forEach(diceNode => diceNode.remove());
+  
+  const categories = ['aces', 'twos', 'threes', 'fours', 'fives', 'sixes', 'choice', 'quad', 'fullhouse', 'sstraight', 'lstraight', 'yacht'];
+  categories.forEach(cat => {
+    if (confirmedScores[cat] === undefined) {
+      document.getElementById(`score-${cat}`).innerText = '-';
+      document.getElementById(`score-${cat}`).className = 'score-cell preview';
+    }
+  });
+
+  document.getElementById('throw-btn').disabled = false;
+}
+
+// 🍏 게임판 전체를 1라운드 새 게임 상태로 부드럽게 되돌리는 자동 리셋 함수
+function resetWholeGame() {
+  currentRound = 1;
+  remainingRolls = 3;
+  confirmedScores = {};
+  
+  // 점수판 글자 및 선택 속성 전체 공장 초기화
+  const categories = ['aces', 'twos', 'threes', 'fours', 'fives', 'sixes', 'choice', 'quad', 'fullhouse', 'sstraight', 'lstraight', 'yacht'];
+  categories.forEach(cat => {
+    const cell = document.getElementById(`score-${cat}`);
+    if (cell) {
+      cell.innerText = '-';
+      cell.className = 'score-cell preview';
+      if (cell.parentElement) {
+        cell.parentElement.classList.add('selectable'); // 클릭 가능하도록 되살림
+      }
+    }
+  });
+  
+  // 보너스 점수 및 종합 합계 리셋
+  const bonusCell = document.getElementById('score-bonus');
+  const totalCell = document.getElementById('score-total');
+  if (bonusCell) bonusCell.innerText = '0 / 63 (+0)';
+  if (totalCell) totalCell.innerText = '0';
+  
+  // 필드 위 주사위 데이터 흔적 완전 삭제
+  currentDiceList = Array(5).fill(null);
+  placedDicePositions = [];
+  document.querySelectorAll('.dice-wrapper').forEach(diceNode => diceNode.remove());
+  
+  // 상단 도트 표시판 및 주사위 기회 마크 복원
+  updateStatusPanel();
+  
+  // 던지기 버튼 잠금 해제
+  const throwBtn = document.getElementById('throw-btn');
+  if (throwBtn) throwBtn.disabled = false;
+}
+</script>
+</body>
+</html>
