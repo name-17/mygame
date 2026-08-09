@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-CARD NICKNAME MULTI</title>
+    <style>
+        /* 기본 배경: 어두운 지하 도박장 분위기 */
+        body { 
+            background: radial-gradient(circle, #1a1a1a 0%, #0a0a0a 100%); 
+            color: #fff; 
+            font-family: sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            margin: 0;
+        }
+        h1 { 
+            color: #e50914; 
+            font-size: 2.2rem; 
+            letter-spacing: 3px; 
+            text-shadow: 0 0 10px rgba(229, 9, 20, 0.6); 
+            margin-bottom: 20px;
+        }
+        .box { 
+            background: rgba(31, 31, 31, 0.85); 
+            padding: 15px; 
+            border-radius: 12px; 
+            max-width: 500px; 
+            margin: 0 auto 20px; 
+            border: 1px solid #3a3a3a;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+        input { 
+            padding: 12px; 
+            border-radius: 6px; 
+            border: 1px solid #444; 
+            background: #222; 
+            color: #fff; 
+            text-align: center; 
+            font-size: 16px; 
+            width: 80%; 
+            max-width: 250px;
+            transition: all 0.3s;
+        }
+        input:focus {
+            border-color: #e50914;
+            outline: none;
+            box-shadow: 0 0 8px rgba(229, 9, 20, 0.4);
+        }
+        .game-zone { display: none; flex-direction: column; align-items: center; gap: 20px; }
+        .card-area { display: flex; justify-content: center; gap: 12px; min-height: 130px; padding: 10px; }
+        
+        /* ✨ 카드 기본 디자인 기본형 (입체감과 그림자 추가) */
+        .card { 
+            width: 75px; 
+            height: 115px; 
+            border-radius: 10px; 
+            border: 2px solid #444; 
+            background: #2a2a2a; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 15px; 
+            font-weight: 900; 
+            cursor: pointer; 
+            user-select: none; 
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        /* 마우스 올렸을 때 부드럽게 위로 뜨고 빛나는 효과 */
+        .card:hover { 
+            transform: translateY(-12px) scale(1.05); 
+            box-shadow: 0 15px 25px rgba(0,0,0,0.8);
+        }
+        
+        /* 👑 황제 카드: 화려한 리치 골드 및 아우라 */
+        .card.E { 
+            background: linear-gradient(135deg, #ffe066 0%, #f5b041 50%, #d35400 100%); 
+            color: #111; 
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(245, 176, 65, 0.5), 0 6px 12px rgba(0,0,0,0.6);
+        }
+        .card.E:hover {
+            box-shadow: 0 0 25px rgba(245, 176, 65, 0.9), 0 15px 25px rgba(0,0,0,0.8);
+        }
+        
+        /* 👤 시민 카드: 세련되고 깔끔한 실버 메탈릭 */
+        .card.C { 
+            background: linear-gradient(135deg, #ffffff 0%, #bdc3c7 50%, #7f8c8d 100%); 
+            color: #2c3e50; 
+            border-color: #ecf0f1;
+        }
+        .card.C:hover {
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4), 0 15px 25px rgba(0,0,0,0.8);
+        }
+        
+        /* ⛓️ 노예 카드: 무겁고 다크한 철조망 & 블러드 레드 */
+        .card.S { 
+            background: linear-gradient(135deg, #34495e 0%, #1a252f 50%, #000000 100%); 
+            color: #ff3333; 
+            border-color: #ff3333;
+            text-shadow: 0 0 5px #ff0000;
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.4), 0 6px 12px rgba(0,0,0,0.6);
+        }
+        .card.S:hover {
+            box-shadow: 0 0 25px rgba(255, 51, 51, 0.8), 0 15px 25px rgba(0,0,0,0.8);
+        }
+        
+        /* 🃏 상대방의 숨겨진 카드 & 카드 뒷면 패턴 (불길한 격자 문양) */
+        .card.back { 
+            background: linear-gradient(135deg, #111 0%, #222 100%);
+            background-image: 
+                linear-gradient(45deg, #2c0505 25%, transparent 25%, transparent 75%, #2c0505 75%, #2c0505),
+                linear-gradient(45deg, #2c0505 25%, #1a1a1a 25%, #1a1a1a 75%, #2c0505 75%, #2c0505);
+            background-size: 16px 16px;
+            background-position: 0 0, 8px 8px;
+            color: transparent; 
+            border-color: #441111;
+            cursor: default;
+        }
+        .card.back:hover { transform: none; box-shadow: 0 6px 12px rgba(0,0,0,0.6); border-color: #441111; }
+        
+        /* 이미 낸 카드 스타일 (마우스 올려도 안 움직이게 고정) */
+        .battle .card { cursor: default; }
+        .battle .card:hover { transform: none; box-shadow: 0 6px 12px rgba(0,0,0,0.6); }
+        
+        .battle { 
+            display: flex; 
+            gap: 40px; 
+            margin: 25px 0; 
+            background: rgba(15, 15, 15, 0.9); 
+            padding: 25px; 
+            border-radius: 15px; 
+            border: 2px dashed #e50914; 
+            min-width: 270px; 
+            justify-content: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        .slot { font-size: 15px; font-weight: bold; color: #ccc; letter-spacing: 1px; }
+        #msg { font-size: 19px; font-weight: bold; color: #00ffcc; margin: 20px 0; text-shadow: 0 0 8px rgba(0, 255, 204, 0.3); }
+        
+        /* 버튼 디자인: 타오르는 레드 스타일 */
+        button { 
+            background: linear-gradient(180deg, #e50914 0%, #b81d24 100%); 
+            color: #fff; 
+            border: none; 
+            padding: 14px 28px; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 15px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
+            transition: all 0.2s;
+        }
+        button:hover { 
+            background: linear-gradient(180deg, #ff1e27 0%, #e50914 100%); 
+            box-shadow: 0 6px 20px rgba(229, 9, 20, 0.6);
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body>
+    <h1>E-CARD MULTIPLAY (구글보안)</h1>
+    <div id="status-loading">구글 철통 보안 서버 연결 중...</div>
+    
+    <!-- 닉네임 입력 영역 -->
+    <div class="box" id="setup-area" style="display:none;">
+        <p>게임에서 사용할 닉네임을 입력하세요.</p>
+        <input type="text" id="nick-input" placeholder="닉네임 입력 (예: 카이지)" maxlength="10"><br><br>
+        <button onclick="joinGame()">대전방 입장하기</button>
+    </div>
+
+    <!-- 진짜 닉네임 전광판 화면 구역 -->
+    <div class="game-zone" id="game-area">
+        <div class="box" style="width:100%; max-width:400px;">
+            <div id="side-txt" style="font-weight:bold; color:#ffcc00; font-size:18px;">진영 판정 중</div>
+            <div style="margin-top:5px; font-size:15px;">
+                <span id="my-name-display" style="color:#00ffcc;">나</span>: <span id="my-score">0</span>점 | 
+                <span id="en-name-display" style="color:#ff3333;">상대</span>: <span id="en-score">0</span>점
+            </div>
+        </div>
+        <div>
+            <div style="margin-bottom:5px;"><span id="en-title-name" style="color:#ffaa00; font-weight:bold;">상대방</span> 님의 카드 (<span id="en-count">5</span>장)</div>
+            <div class="card-area" id="en-hand"></div>
+        </div>
+        <div class="battle">
+            <div class="slot"><span id="en-slot-name" style="color:#ff3333;">상대</span> 제출<div id="en-played" style="margin-top:10px;"></div></div>
+            <div class="slot"><span id="my-slot-name" style="color:#00ffcc;">나</span> 제출<div id="my-played" style="margin-top:10px;"></div></div>
+        </div>
+        <div id="msg">서버 데이터 동기화 중...</div>
+        <button id="next-btn" onclick="reqNext()" style="display:none;">다음 라운드 넘기기</button>
+        <div><div style="margin-top:5px; font-weight:bold; color:#00ffcc;">내 카드 (클릭하여 제출)</div><div class="card-area" id="my-hand"></div></div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://gstatic.com";
+        import { getAuth, signInAnonymously } from "https://gstatic.com";
+        import { getDatabase, ref, set, onValue, update } from "https://gstatic.com";
+
+        // ⚠️ 본인의 실제 파이어베이스 Config 키값으로 교체하세요!
+        const firebaseConfig = {
+            apiKey: "AIzaSyAPJrErcVT8JQyIl_qPVxa1BJTCStVRc3E",
+            authDomain: "name-17.firebaseapp.com",
+            databaseURL: "https://name-17-default-rtdb.firebaseio.com",
+            projectId: "name-17",
+            storageBucket: "name-17.firebasestorage.app",
+            messagingSenderId: "150237109916",
+            appId: "1:150237109916:web:ad8bd27e94752463511759"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app); const db = getDatabase(app);
+        let myUid = "", myNick = "", roomKey = "game_room_1";
+        let mySide = "", round = 1, myScore = 0, enemyScore = 0;
+        let myHand = [], enemyCardCount = 5, myChoice = null, enemyChoice = null;
+        let isP1 = false, isP2 = false, gameData = {};
+        const names = { "E": "황제", "C": "시민", "S": "노예" };
+
+        signInAnonymously(auth).then((userCred) => {
+            myUid = userCred.user.uid;
+            document.getElementById("setup-area").style.display = "block";
+            document.getElementById("status-loading").style.display = "none";
+        }).catch(err => alert("구글 서버 통신 에러: " + err.message));
+
+        window.joinGame = function() {
+            myNick = document.getElementById("nick-input").value.trim();
+            if (!myNick) return alert("닉네임을 입력해 주세요!");
+            const roomRef = ref(db, 'rooms/' + roomKey);
+            onValue(roomRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    isP1 = true;
+                    set(roomRef, { 
+                        p1: myUid, p1Nick: myNick, p2: "", p2Nick: "대기 중...",
+                        round: 1, p1Score: 0, p2Score: 0, p1Choice: "", p2Choice: "", p1Count: 5, p2Count: 5, state: "WAIT" 
+                    });
+                } else {
+                    gameData = data;
+                    if (data.p1 === myUid) isP1 = true;
+                    else if (data.p2 === myUid || data.p2 === "") {
+                        isP2 = true;
+                        if (data.p2 === "") update(roomRef, { p2: myUid, p2Nick: myNick, state: "START" });
+                    }
+                    updateGameScreen();
+                }
+            });
+        };
+
+        function updateGameScreen() {
+            document.getElementById("setup-area").style.display = "none";
+            document.getElementById("game-area").style.display = "flex";
+            const p1N = gameData.p1Nick || "플레이어1", p2N = gameData.p2Nick || "플레이어2";
+            
+            if (isP1) {
+                document.getElementById("my-name-display").innerText = p1N + " (나)"; document.getElementById("en-name-display").innerText = p2N;
+                document.getElementById("my-slot-name").innerText = p1N; document.getElementById("en-slot-name").innerText = p2N; document.getElementById("en-title-name").innerText = p2N;
+            } else if (isP2) {
+                document.getElementById("my-name-display").innerText = p2N + " (나)"; document.getElementById("en-name-display").innerText = p1N;
+                document.getElementById("my-slot-name").innerText = p2N; document.getElementById("en-slot-name").innerText = p1N; document.getElementById("en-title-name").innerText = p1N;
+            } else {
+                document.getElementById("my-name-display").innerText = p1N + " (관전중)"; document.getElementById("en-name-display").innerText = p2N + " (관전중)";
+                document.getElementById("my-slot-name").innerText = p1N; document.getElementById("en-slot-name").innerText = p2N; document.getElementById("en-title-name").innerText = p2N;
+            }
+
+            if (gameData.state === "WAIT") { document.getElementById("msg").innerText = "상대방 플레이어를 기다리는 중입니다..."; return; }
+            round = gameData.round;
+            myScore = isP1 ? gameData.p1Score : (isP2 ? gameData.p2Score : gameData.p1Score);
+            enemyScore = isP1 ? gameData.p2Score : (isP2 ? gameData.p1Score : gameData.p2Score);
+            enemyCardCount = isP1 ? gameData.p2Count : gameData.p1Count;
+            const isEmperorRound = (round <= 4 || round > 8);
+            mySide = isP1 ? (isEmperorRound ? "EMPEROR" : "SLAVE") : (isEmperorRound ? "SLAVE" : "EMPEROR");
+
+            if (isP1 || isP2) document.getElementById("side-txt").innerText = `${round}라운드: 당신은 [${mySide === "EMPEROR" ? "황제 측" : "노예 측"}]`;
+            else document.getElementById("side-txt").innerText = `${round}라운드: 관전 모드 (${p1N}:${isEmperorRound?"황제":"노예"} vs ${p2N}:${isEmperorRound?"노예":"황제"})`;
+            document.getElementById("my-score").innerText = myScore; document.getElementById("en-score").innerText = enemyScore;
+
+            if ((isP1 || isP2) && myHand.length === 0 && !myChoice && !gameData.p1Choice && !gameData.p2Choice) {
+                myHand = mySide === "EMPEROR" ? ["E", "C", "C", "C", "C"] : ["S", "C", "C", "C", "C"];
+            }
+            myChoice = isP1 ? gameData.p1Choice : (isP2 ? gameData.p2Choice : null);
+            enemyChoice = isP1 ? gameData.p2Choice : (isP2 ? gameData.p1Choice : null);
+
+            if (isP1 || isP2) {
+                if (myChoice) document.getElementById("my-played").innerHTML = `<div class="card ${myChoice}">${names[myChoice]}</div>`;
+                else document.getElementById("my-played").innerHTML = "";
+                if (enemyChoice && myChoice) {
+                    document.getElementById("en-played").innerHTML = `<div class="card ${enemyChoice}">${names[enemyChoice]}</div>`; checkBattle();
+                } else if (enemyChoice) {
+                    document.getElementById("en-played").innerHTML = `<div class="card back">?</div>`;
+                    document.getElementById("msg").innerText = `${isP1 ? p2N : p1N} 님이 카드를 냈습니다! 내 차례입니다.`;
+                } else {
+                    document.getElementById("en-played").innerHTML = "";
+                    if (myChoice) document.getElementById("msg").innerText = "상대방의 선택을 기다리는 중...";
+                    else document.getElementById("msg").innerText = "카드를 내세요!";
+                }
+            } else {
+                if(gameData.p1Choice) document.getElementById("my-played").innerHTML = `<div class="card back">?</div>`; else document.getElementById("my-played").innerHTML = "";
+                if(gameData.p2Choice) document.getElementById("en-played").innerHTML = `<div class="card back">?</div>`; else document.getElementById("en-played").innerHTML = "";
+                if(gameData.p1Choice && gameData.p2Choice) {
+                    document.getElementById("my-played").innerHTML = `<div class="card ${gameData.p1Choice}">${names[gameData.p1Choice]}</div>`;
+                    document.getElementById("en-played").innerHTML = `<div class="card ${gameData.p2Choice}">${names[gameData.p2Choice]}</div>`; document.getElementById("msg").innerText = "대결 진행 중...";
+                } else document.getElementById("msg").innerText = "두 플레이어의 대결을 관전하고 있습니다.";
+            }
+            if (isP1 || isP2) renderHands();
+        }
+
+        function renderHands() {
+            const mh = document.getElementById("my-hand"); mh.innerHTML = "";
+            myHand.forEach((c, i) => {
+                let d = document.createElement("div"); d.className = `card ${c}`; d.innerText = names[c];
+                d.onclick = () => {
+                    if (myChoice) return;
+                    let card = myHand.splice(i, 1); myChoice = card;
+                    const updates = {}; updates[isP1 ? 'p1Choice' : 'p2Choice'] = card; updates[isP1 ? 'p1Count' : 'p2Count'] = myHand.length;
+                    update(ref(db, 'rooms/' + roomKey), updates);
+                };
+                mh.appendChild(d);
+            });
+            const eh = document.getElementById("en-hand"); eh.innerHTML = "";
+            for(let i=0; i<enemyCardCount; i++) { let d = document.createElement("div"); d.className = "card enemy back"; d.innerText = "?"; eh.appendChild(d); }
+            document.getElementById("en-count").innerText = enemyCardCount;
+        }
+
+        function checkBattle() {
+            const p1N = gameData.p1Nick, p2N = gameData.p2Nick;
+            if (myChoice === enemyChoice) {
+                document.getElementById("msg").innerText = "시민 동점! 3초 후 다음 카드 제출.";
+                if (isP1) setTimeout(() => { update(ref(db, 'rooms/' + roomKey), { p1Choice: "", p2Choice: "" }); }, 3000);
+            } else {
+                let win = ((myChoice==="E" && enemyChoice==="C") || (myChoice==="C" && enemyChoice==="S") || (myChoice==="S" && enemyChoice==="E"));
+                let p = win ? (mySide === "SLAVE" ? 5 : 1) : 0, ep = !win ? (mySide === "EMPEROR" ? 5 : 1) : 0;
+                if (win) document.getElementById("msg").innerText = `🎉 당신의 승리! (+${p}점)`;
+                else document.getElementById("msg").innerText = `💀 상대방의 승리... (+${ep}점)`;
+                if (isP1) {
+                    document.getElementById("next-btn").style.display = "block";
+                    window.reqNext = function() {
+                        if (round >= 12) { alert("12라운드 게임 종료! 최종 점수를 확인하세요."); set(ref(db, 'rooms/' + roomKey), null); location.reload(); return; }
+                        update(ref(db, 'rooms/' + roomKey), { round: round + 1, p1Score: gameData.p1Score + (isP1 ? p : ep), p2Score: gameData.p2Score + (isP1 ? ep : p), p1Choice: "", p2Choice: "", p1Count: 5, p2Count: 5 });
+                        myHand = [];
+                    }
+                } else document.getElementById("msg").innerText += ` (${p1N} 방장이 다음 라운드를 넘기길 기다리는 중)`;
+            }
+        }
+    </script>
+</body>
+</html>
